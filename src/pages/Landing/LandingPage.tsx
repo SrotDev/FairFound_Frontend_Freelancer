@@ -29,7 +29,7 @@ const LandingPage = () => {
         <div className="container relative">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
-              <TrendingUp className="h-4 w-4" />
+              <BarChart3 className="h-4 w-4" />
               Data-driven career growth
             </div>
             <h1 className="mb-6 text-4xl font-bold text-white lg:text-6xl">
