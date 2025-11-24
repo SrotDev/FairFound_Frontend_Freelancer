@@ -1,0 +1,51 @@
+import { Link, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { TrendingUp } from "lucide-react";
+import { useAppContext } from "@/context/AppContext";
+
+const Navbar = () => {
+  const location = useLocation();
+  const { user } = useAppContext();
+  const isHome = location.pathname === "/";
+
+  return (
+    <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-16 items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent/80">
+            <TrendingUp className="h-5 w-5 text-accent-foreground" />
+          </div>
+          <span className="text-xl font-bold">FairFound</span>
+        </Link>
+
+        <div className="flex items-center gap-4">
+          {user ? (
+            <>
+              <Link to="/dashboard/industry">
+                <Button variant="ghost">Dashboard</Button>
+              </Link>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-accent/20 flex items-center justify-center">
+                  <span className="text-sm font-medium text-accent">{user.name.charAt(0)}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {!isHome && (
+                <Link to="/">
+                  <Button variant="ghost">Home</Button>
+                </Link>
+              )}
+              <Link to="/register">
+                <Button>Get Started</Button>
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+export default Navbar;

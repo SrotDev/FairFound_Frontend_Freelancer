@@ -1,0 +1,123 @@
+import { createContext, useContext, useState, ReactNode } from "react";
+import { AppState, User, Industry, FreelancerMetrics, RoadmapMilestone } from "@/types/domain";
+
+const initialFreelancerProfile: FreelancerMetrics = {
+  profileCompleteness: 72,
+  profileViews: 135,
+  proposalSuccessRate: 18,
+  jobInvitations: 6,
+  hourlyRate: 45,
+  skills: ["React", "TypeScript", "Node.js", "UI/UX Design"],
+  portfolioItems: 8,
+  repeatClientsRate: 25,
+};
+
+const initialRoadmap: RoadmapMilestone[] = [
+  {
+    id: "1",
+    title: "Fix Profile Basics",
+    description: "Complete your headline, overview, and add 3 strong portfolio items",
+    estimatedEffort: "2-3 days",
+    completed: false,
+    order: 1,
+  },
+  {
+    id: "2",
+    title: "Skill Upgrade",
+    description: "Complete a course and build 1-2 showcase projects in trending skills",
+    estimatedEffort: "1-2 weeks",
+    completed: false,
+    order: 2,
+  },
+  {
+    id: "3",
+    title: "Proposal Optimization",
+    description: "Improve proposal quality, create templates, and track performance",
+    estimatedEffort: "3-5 days",
+    completed: false,
+    order: 3,
+  },
+  {
+    id: "4",
+    title: "Build Case Studies",
+    description: "Document your best projects with detailed case studies",
+    estimatedEffort: "1 week",
+    completed: false,
+    order: 4,
+  },
+];
+
+interface AppContextType extends AppState {
+  setUser: (user: User | null) => void;
+  setSelectedIndustry: (industry: Industry) => void;
+  updateFreelancerProfile: (profile: Partial<FreelancerMetrics>) => void;
+  toggleMilestone: (id: string) => void;
+  calculatePseudoRanking: () => number;
+  savePreviousRanking: () => void;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const AppProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [selectedIndustry, setSelectedIndustry] = useState<Industry>(null);
+  const [freelancerProfile, setFreelancerProfile] = useState<FreelancerMetrics>(initialFreelancerProfile);
+  const [roadmapMilestones, setRoadmapMilestones] = useState<RoadmapMilestone[]>(initialRoadmap);
+  const [previousPseudoRanking, setPreviousPseudoRanking] = useState<number | null>(null);
+
+  const calculatePseudoRanking = (): number => {
+    const completedMilestones = roadmapMilestones.filter((m) => m.completed).length;
+    const milestoneBonus = (completedMilestones / roadmapMilestones.length) * 15;
+
+    const ranking = Math.min(
+      100,
+      Math.round(
+        freelancerProfile.profileCompleteness * 0.25 +
+          Math.min(freelancerProfile.proposalSuccessRate * 2, 30) +
+          Math.min(freelancerProfile.portfolioItems * 3, 20) +
+          Math.min(freelancerProfile.repeatClientsRate, 15) +
+          milestoneBonus
+      )
+    );
+
+    return ranking;
+  };
+
+  const updateFreelancerProfile = (profile: Partial<FreelancerMetrics>) => {
+    setFreelancerProfile((prev) => ({ ...prev, ...profile }));
+  };
+
+  const toggleMilestone = (id: string) => {
+    setRoadmapMilestones((prev) =>
+      prev.map((milestone) => (milestone.id === id ? { ...milestone, completed: !milestone.completed } : milestone))
+    );
+  };
+
+  const savePreviousRanking = () => {
+    setPreviousPseudoRanking(calculatePseudoRanking());
+  };
+
+  const value: AppContextType = {
+    user,
+    selectedIndustry,
+    freelancerProfile,
+    roadmapMilestones,
+    previousPseudoRanking,
+    setUser,
+    setSelectedIndustry,
+    updateFreelancerProfile,
+    toggleMilestone,
+    calculatePseudoRanking,
+    savePreviousRanking,
+  };
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+};
+
+export const useAppContext = () => {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error("useAppContext must be used within AppProvider");
+  }
+  return context;
+};
