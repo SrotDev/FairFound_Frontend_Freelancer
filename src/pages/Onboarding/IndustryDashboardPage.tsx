@@ -106,7 +106,7 @@ const IndustryDashboardPage = () => {
 
               {industry.available ? (
                 <Button
-                  className="w-full group-hover:bg-accent group-hover:text-accent-foreground transition-colors"
+                  className="w-full hover:bg-cyan-700 group-hover:text-accent-foreground transition-colors"
                   onClick={() => handleIndustrySelect(industry.value)}
                 >
                   Get Started
