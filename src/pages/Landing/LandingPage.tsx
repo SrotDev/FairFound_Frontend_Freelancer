@@ -9,7 +9,8 @@ import {
   Briefcase, 
   ShoppingBag, 
   Code, 
-  Building2 
+  Building2,
+  
 } from "lucide-react";
 import { useAppContext } from "@/context/AppContext";
 

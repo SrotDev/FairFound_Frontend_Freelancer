@@ -1,9 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { TrendingUp } from "lucide-react";
 import { useAppContext } from "@/context/AppContext";
 import { useState } from "react";
-import { Moon, Sun } from "lucide-react";
+import { TrendingUp, Moon, Sun, UserRoundSearch } from "lucide-react";
+
 
 const Navbar = () => {
   const location = useLocation();
@@ -21,7 +21,7 @@ const Navbar = () => {
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2 transition-opacity hover:opacity-80">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent/80">
-            <TrendingUp className="h-5 w-5 text-accent-foreground" />
+            <UserRoundSearch className="h-5 w-5 text-accent-foreground" />
           </div>
           <span className="text-xl font-bold">FairFound</span>
         </Link>
