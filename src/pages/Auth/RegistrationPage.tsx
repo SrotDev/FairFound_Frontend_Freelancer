@@ -45,11 +45,12 @@ const RegistrationPage = () => {
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-3xl font-bold">Create your FairFound account</h1>
           <p className="text-muted-foreground">
-            Start by telling us who you are and how we can help
+            Unlock next-level career potential, all in<br />one place.
           </p>
         </div>
 
-        <div className="space-y-4">
+        {/* Hidden for now */}
+        <div className="space-y-4 hidden">
           <Button
             variant="outline"
             className="w-full"
@@ -80,7 +81,8 @@ const RegistrationPage = () => {
           </Button>
         </div>
 
-        <div className="my-6 flex items-center">
+        {/* This separator is hidden for now as well */}
+        <div className="my-6 flex items-center hidden">
           <Separator className="flex-1" />
           <span className="mx-4 text-sm text-muted-foreground">or sign up with email</span>
           <Separator className="flex-1" />
