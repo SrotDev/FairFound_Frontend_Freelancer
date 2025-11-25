@@ -15,6 +15,8 @@ import InsightsPage from "@/pages/Freelancer/InsightsPage";
 import CareerRoadmapPage from "@/pages/Freelancer/CareerRoadmapPage";
 import ReEvaluationPage from "@/pages/Freelancer/ReEvaluationPage";
 import NotFound from "./pages/NotFound";
+import ComparisonHistoryPage from "@/pages/Freelancer/ComparisonHistoryPage";
+import ComparisonDetailPage from "@/pages/Freelancer/ComparisonDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,8 @@ const App = () => (
               <Route path="/freelancer/insights" element={<InsightsPage />} />
               <Route path="/freelancer/roadmap" element={<CareerRoadmapPage />} />
               <Route path="/freelancer/re-evaluation" element={<ReEvaluationPage />} />
+              <Route path="/freelancer/comparison-history" element={<ComparisonHistoryPage />} />
+              <Route path="/freelancer/comparison-history/:id" element={<ComparisonDetailPage />} />
               <Route path="/auth/register" element={<RegistrationPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

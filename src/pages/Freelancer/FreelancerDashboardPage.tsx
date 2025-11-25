@@ -20,9 +20,14 @@ const FreelancerDashboardPage = () => {
             Welcome back, {user?.name || "there"}. Here's where you stand today.
           </p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
+        <Button
+          variant="outline"
+          className="flex items-center gap-2 border-accent/40 text-accent hover:bg-accent/10
+            dark:border-white/20 dark:text-white dark:hover:bg-white/10"
+          onClick={() => navigate("/freelancer/comparison-history")}
+        >
           <ClipboardList className="h-4 w-4" />
-          See Stats History
+          Comparison History
         </Button>
       </div>
 
@@ -61,17 +66,22 @@ const FreelancerDashboardPage = () => {
             />
           </div>
 
-          <Card className="p-6 bg-gradient-to-br from-primary to-secondary text-white">
+          <Card
+            className="p-6
+            bg-gradient-to-br from-accent/10 via-primary/5 to-secondary/10
+            dark:from-[#0E1422] dark:via-[#1B2540] dark:to-[#2A3960]
+            text-foreground dark:text-white border border-accent/20 dark:border-white/10"
+          >
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <h3 className="mb-2 text-xl font-bold">Ready to see how you compare?</h3>
-                <p className="text-white/90">
+                <p className="text-muted-foreground dark:text-white/80">
                   Compare your profile against top freelancers and specific competitors
                 </p>
               </div>
               <Button
                 size="lg"
-                className="bg-accent hover:bg-accent/90 text-accent-foreground shrink-0"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground shrink-0 shadow-md"
                 onClick={() => navigate("/freelancer/compare")}
               >
                 Compare your profile

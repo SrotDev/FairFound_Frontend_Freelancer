@@ -56,7 +56,7 @@ These derive from `src/types/domain.ts` and extended UI needs.
   "userMetrics": <FreelancerMetrics>,
   "topFreelancersAverage": <FreelancerMetrics>,
   "competitorMetrics": <FreelancerMetrics | null>,
-  "pseudoRanking": 0,        // integer 0-100 (derived)
+  "fairRanking": 0,          // integer 0-100 (derived)
   "tier": "Emerging" | "Competitive" | "Top-tier ready"
 }
 
@@ -186,11 +186,11 @@ Returns updated list.
 POST `/freelancer/profile/views` – increments `profileViews`. 202 Accepted.
 POST `/freelancer/profile/invitations` – increments `jobInvitations`. 202 Accepted.
 
-### 3.5 Pseudo Ranking (Calculated)
-GET `/freelancer/pseudo-ranking`
+### 3.5 Fair Ranking (Calculated)
+GET `/freelancer/fair-ranking`
 200 OK:
 ```json
-{ "pseudoRanking": 72, "tier": "Competitive" }
+{ "fairRanking": 72, "tier": "Competitive" }
 ```
 Backend formula should approximate frontend logic (weights from `ProfileComparisonPage.tsx`).
 
@@ -352,7 +352,7 @@ If enforced, include headers:
 2. `GET /industries` → show options.
 3. `POST /user/industry` with `{ "industry": "Freelancer" }`.
 4. `GET /freelancer/profile` (initialize defaults if new).
-5. `GET /freelancer/pseudo-ranking`.
+5. `GET /freelancer/fair-ranking`.
 6. Render dashboard cards.
 
 ### Comparison Flow

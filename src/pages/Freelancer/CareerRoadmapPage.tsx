@@ -50,7 +50,7 @@ const CareerRoadmapPage = () => {
               <span className="text-4xl font-bold text-accent">{projectedRanking}</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Estimated pseudo-ranking after completing all milestones
+              Estimated Fair-Ranking after completing all milestones
             </p>
           </Card>
         </div>
@@ -107,11 +107,11 @@ const CareerRoadmapPage = () => {
           <h3 className="mb-2 text-lg font-semibold">Profile Update Reminder</h3>
           <p className="mb-4 text-sm text-muted-foreground">
             Once you've made progress on these milestones and updated your actual freelance profile,
-            come back here to re-evaluate and see your improved pseudo-ranking.
+            come back here to re-evaluate and see your improved Fair-Ranking.
           </p>
           <p className="text-sm text-muted-foreground">
             For this demo, clicking "See your new ranking" will simulate the effect of completing
-            your milestones on your pseudo-ranking score.
+            your milestones on your Fair-Ranking score.
           </p>
         </Card>
 

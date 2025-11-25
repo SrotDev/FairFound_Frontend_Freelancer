@@ -8,10 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAppContext } from "@/context/AppContext";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, TrendingUp, TrendingDown } from "lucide-react";
+import { useComparisonHistory } from "@/hooks/use-comparison-history";
 
 const ProfileComparisonPage = () => {
   const navigate = useNavigate();
   const { freelancerProfile } = useAppContext();
+    const { addEntry } = useComparisonHistory();
   const [competitorUrl, setCompetitorUrl] = useState("");
   const [selectedRole, setSelectedRole] = useState("web-developer");
 
@@ -163,14 +165,23 @@ const ProfileComparisonPage = () => {
               </div>
             </Card>
 
-            <Button
-              size="lg"
-              className="w-full"
-              onClick={() => navigate("/freelancer/insights")}
-            >
-              Get AI-Powered Insights
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => {
+                  addEntry({
+                    role: selectedRole,
+                    userMetrics: freelancerProfile,
+                    topFreelancersAverage,
+                    userScore,
+                    competitorUrl: competitorUrl || undefined,
+                  });
+                  navigate("/freelancer/insights");
+                }}
+              >
+                Get AI-Powered Insights
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
           </div>
         </div>
       </div>
