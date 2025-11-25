@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { PseudoRankingBadge } from "@/components/freelancer/PseudoRankingBadge";
 import { useAppContext } from "@/context/AppContext";
-import { Eye, TrendingUp, Target, Mail, ArrowRight } from "lucide-react";
+import { Eye, TrendingUp, Target, Mail, ArrowRight, ClipboardList } from "lucide-react";
 
 const FreelancerDashboardPage = () => {
   const navigate = useNavigate();
@@ -13,11 +13,17 @@ const FreelancerDashboardPage = () => {
 
   return (
     <div className="container py-12">
-      <div className="mb-8">
-        <h1 className="mb-2 text-4xl font-bold">Freelancer Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back, {user?.name || "there"}. Here's where you stand today.
-        </p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="mb-2 text-4xl font-bold">Freelancer Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, {user?.name || "there"}. Here's where you stand today.
+          </p>
+        </div>
+        <Button className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
+          <ClipboardList className="h-4 w-4" />
+          See Stats History
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
