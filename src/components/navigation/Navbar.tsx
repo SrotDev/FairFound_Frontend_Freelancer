@@ -37,7 +37,9 @@ const Navbar = () => {
 
           {user ? (
             <>
-              <Link to="/dashboard/industry">
+              <Link
+                to={location.pathname.startsWith("/freelancer") ? "/freelancer/dashboard" : "/dashboard/industry"}
+              >
                 <Button variant="ghost">Dashboard</Button>
               </Link>
               <div className="flex items-center gap-2">
