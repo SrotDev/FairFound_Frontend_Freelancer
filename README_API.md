@@ -1,419 +1,532 @@
-# FairFound Frontend – Backend API Requirements (v1)
+# FairFound Backend API Specification & Django Architecture Guide
 
-This document lists all REST API endpoints the frontend expects for the Freelancer industry (current implemented UI). It defines request/response payloads, status codes, and error conventions so backend developers can implement consistently. All endpoints are namespaced under `/api/v1` (unless stated otherwise). JSON is UTF-8 encoded. Times are ISO-8601 timestamps.
+---
+## 1. Domain Overview
+ - `PATCH /users/me/industry/` (set selected industry enum)
+Core Entities:
+- User (accounts)
+ - `DELETE /freelancers/me/comparisons/` (bulk clear all for user)
+- SentimentReview (analyzed client feedback items)
+- MentorshipRequest + MentorshipMessage (conversation thread)
+ - `DELETE /freelancers/me/feedback/` (bulk clear all for user)
 
-## General Conventions
-- Base URL: `https://<backend-host>/api/v1`
-- Authentication: Bearer JWT in `Authorization: Bearer <token>` header (after login/registration). Public endpoints are noted.
-- Content-Type: `application/json` for request bodies (except file upload endpoints – none defined yet).
-- Boolean flags use `camelCase`.
-- Collections may support pagination: `?page=<number>&pageSize=<number>`; response includes `meta` block.
-- Numeric scores are integers 0–100 unless explicitly stated.
-- All IDs are UUID strings unless generated otherwise.
-- Time fields end with `At` and are ISO strings.
+---
+## 2. Django App Structure
+Suggested project layout:
+```
+fairfound/
+  manage.py
+  fairfound/settings.py
+  fairfound/urls.py
+  fairfound/asgi.py
+  fairfound/wsgi.py
 
-## Error Format (Unified)
-On any non-2xx response:
-```json
+  apps/
+
+### 9.1.1 Selected Industry Update Request
+```
 {
-  "error": {
-    "code": "string",          // machine readable e.g. VALIDATION_ERROR, NOT_FOUND
-    "message": "Human readable",// short message
-    "details": [                 // optional array of field-level issues
-      { "field": "email", "issue": "Must be a valid email" }
-    ]
+  "industry": "Freelancer"  // Enum: Freelancer | E-commerce | Developer | Business
+}
+```
+    accounts/          # Custom User, registration, profile endpoints
+    freelancers/       # FreelancerProfile, ranking, roadmap
+    comparisons/       # ComparisonEntry logic
+    sentiment/         # SentimentReview + aggregation
+    mentorship/        # MentorshipRequest, MentorshipMessage
+    industries/        # Industry definitions
+    core/              # Shared utils, mixins, services
+
+  common/
+    services/          # ranking_service.py, sentiment_service.py
+    permissions/       # IsOwner, IsMentor
+    pagination.py
+    validators.py
+```
+
+Each app exposes `routers.py` or `urls.py` aggregated by root `fairfound/urls.py`.
+
+---
+## 3. Models
+Use UUID primary keys where externally exposed (except optional integer for User if easier). PostgreSQL JSONB for arrays.
+
+### 3.1 User (accounts.models.User)
+Extends `AbstractUser` or `AbstractBaseUser`.
+Fields:
+- `id: UUIDField(pk)`
+- `email: EmailField(unique)`
+- `name: CharField(150)`
+- `is_mentor: BooleanField(default=False)` (flag to access mentor dashboard)
+- `date_joined: DateTimeField(auto_now_add=True)`
+Indexes: email unique.
+
+### 3.2 FreelancerProfile (freelancers.models.FreelancerProfile)
+1:1 with User.
+Fields (maps to frontend FreelancerMetrics):
+- `user: OneToOneField(User, on_delete=CASCADE, related_name="profile")`
+- `profile_completeness: PositiveSmallIntegerField(default=0)` (0–100)
+- `profile_views: PositiveIntegerField(default=0)`
+- `proposal_success_rate: PositiveSmallIntegerField(default=0)` (0–100)
+- `job_invitations: PositiveIntegerField(default=0)`
+- `hourly_rate: PositiveIntegerField(default=0)`
+- `skills: ArrayField(CharField(max_length=60), default=list)` or JSONField
+- `portfolio_items: PositiveSmallIntegerField(default=0)`
+- `repeat_clients_rate: PositiveSmallIntegerField(default=0)` (0–100)
+- `updated_at: DateTimeField(auto_now=True)`
+
+### 3.3 RoadmapMilestone (freelancers.models.RoadmapMilestone)
+Fields:
+- `id: UUIDField(pk)`
+- `user: ForeignKey(User, on_delete=CASCADE, related_name="roadmap_milestones")`
+- `title: CharField(160)`
+- `description: TextField()`
+- `estimated_effort: CharField(40)`
+- `completed: BooleanField(default=False)`
+- `order: PositiveSmallIntegerField()`
+- `created_at: DateTimeField(auto_now_add=True)`
+- `updated_at: DateTimeField(auto_now=True)`
+Constraint: `(user, order)` unique for deterministic ordering.
+
+### 3.4 RankingSnapshot (freelancers.models.RankingSnapshot)
+Stores historical pseudo ranking.
+Fields:
+- `id: UUIDField(pk)`
+- `user: ForeignKey(User, on_delete=CASCADE, related_name="ranking_snapshots")`
+- `value: PositiveSmallIntegerField()` (0–100)
+- `breakdown: JSONField()` (component contributions)
+- `created_at: DateTimeField(auto_now_add=True)`
+Index: `user, -created_at` for recent retrieval.
+
+### 3.5 ComparisonEntry (comparisons.models.ComparisonEntry)
+Fields:
+- `id: UUIDField(pk)`
+- `user: ForeignKey(User, on_delete=CASCADE, related_name="comparisons")`
+- `competitor_identifier: CharField(160)` (opaque slug/profile URL)
+- `competitor_role: CharField(80)`
+- `pseudo_ranking: PositiveSmallIntegerField()` (calculated at time of snapshot)
+- `snapshot: JSONField()` (serialized metrics at comparison time)
+- `created_at: DateTimeField(auto_now_add=True)`
+Index: `user, -created_at`.
+
+### 3.6 SentimentReview (sentiment.models.SentimentReview)
+Fields:
+- `id: UUIDField(pk)`
+- `user: ForeignKey(User, on_delete=CASCADE, related_name="sentiment_reviews")`
+- `text: TextField()`
+- `score: DecimalField(max_digits=5, decimal_places=2)` (normalized -1..1 stored maybe -1.00 to 1.00)
+- `label: CharField(10, choices=[positive, neutral, negative])`
+- `categories: JSONField(default=list)`
+- `suggestions: JSONField(default=list)`
+- `created_at: DateTimeField(auto_now_add=True)`
+
+### 3.7 MentorshipRequest (mentorship.models.MentorshipRequest)
+Fields:
+- `id: UUIDField(pk)`
+- `requester: ForeignKey(User, on_delete=CASCADE, related_name="mentorship_requests")`
+- `mentor: ForeignKey(User, null=True, blank=True, on_delete=SET_NULL, related_name="assigned_requests")`
+- `topic: CharField(160)`
+- `context: TextField()`
+- `preferred_expertise: JSONField(default=list)`
+- `status: CharField(20, choices=[pending, in_progress, completed, rejected])`
+- `created_at: DateTimeField(auto_now_add=True)`
+- `updated_at: DateTimeField(auto_now=True)`
+Index: `status`.
+
+### 3.8 MentorshipMessage (mentorship.models.MentorshipMessage)
+Fields:
+- `id: UUIDField(pk)`
+- `request: ForeignKey(MentorshipRequest, on_delete=CASCADE, related_name="messages")`
+- `sender: ForeignKey(User, on_delete=CASCADE)`
+- `text: TextField()`
+- `created_at: DateTimeField(auto_now_add=True)`
+
+### 3.9 Industry (industries.models.Industry)
+Fields:
+- `id: UUIDField(pk)`
+- `slug: SlugField(unique)`
+- `name: CharField(100)`
+- `description: TextField()`
+- `features: JSONField(default=list)` (list of strings)
+
+---
+## 4. Services (Domain Logic)
+### 4.1 Ranking Service (`ranking_service.py`)
+Function: `compute_pseudo_ranking(profile: FreelancerProfile, milestone_count: int, total_milestones: int) -> (int, dict)`.
+Formula (mirrors frontend):
+```
+score = clamp( profile.profile_completeness * 0.25
+             + min(profile.proposal_success_rate * 2, 30)
+             + min(profile.portfolio_items * 3, 20)
+             + min(profile.repeat_clients_rate, 15)
+             + (milestone_count/total_milestones)*15 ) to 0..100
+```
+Return breakdown dict for transparency.
+
+### 4.2 Sentiment Service (`sentiment_service.py`)
+Function: `analyze_text(text: str) -> dict` returns `{score, label, categories, suggestions}`. Use lightweight heuristic or ML model (transformers) behind asynchronous task. Provide deterministic fallback for dev.
+
+### 4.3 Aggregation
+`aggregate_reviews(user) -> {positives, neutrals, negatives, avg_score, top_categories, actionable_suggestions}` with Postgres queries & `Func` for arrays.
+
+---
+## 5. Serializers
+Use DRF ModelSerializers; hide internal fields where not needed.
+Key serializers:
+- `UserSerializer` (id, name, email, is_mentor, date_joined)
+- `FreelancerProfileSerializer`
+- `RoadmapMilestoneSerializer`
+- `RankingSnapshotSerializer`
+- `ComparisonEntrySerializer`
+- `SentimentReviewSerializer`
+- `MentorshipRequestSerializer`
+- `MentorshipMessageSerializer`
+- `IndustrySerializer`
+- Aggregate serializer objects for sentiment & dashboard responses.
+
+---
+## 6. Authentication & Permissions
+- JWT access (short lived) + refresh.
+- Endpoints under `/auth/` for register/login/refresh/logout.
+- Custom permissions:
+  - `IsOwner` for modifying own milestones/profile.
+  - `IsMentor` for mentor dashboard requests.
+  - `IsRequesterOrMentor` for mentorship messages.
+- Rate-limit sentiment submission (e.g., 200/day) using `django-ratelimit`.
+
+---
+## 7. Pagination & Query Params
+Use DRF `PageNumberPagination` with `page` and `page_size` (default 20, max 100). All list endpoints: comparisons, feedback, roadmap (optional), mentorship requests.
+
+Filtering examples:
+- `/mentorship/dashboard/requests/?status=pending`
+- `/freelancers/me/comparisons/?role=frontend`
+- `/sentiment/?label=negative` (optional future scope)
+
+---
+## 8. REST Endpoints (Complete)
+Base prefix: `/api/v1/`
+
+### 8.1 Health
+- `GET /health/` → `{status: "ok", time: ISO8601}`
+
+### 8.2 Auth
+- `POST /auth/register/` → create user
+- `POST /auth/login/` → `{access, refresh}`
+- `POST /auth/refresh/` → new access
+- `POST /auth/logout/` → invalidate refresh
+- `GET /auth/me/` → current user
+
+### 8.3 Users
+- `GET /users/{id}/`
+- `PATCH /users/me/` (name, email)
+
+### 8.4 Freelancer Profile
+- `GET /freelancers/me/profile/`
+- `PATCH /freelancers/me/profile/` (partial update)
+- `GET /freelancers/{id}/profile/` (public subset) – optional
+
+### 8.5 Ranking
+- `GET /freelancers/me/ranking/` → current + previous + improvement + breakdown
+- `POST /freelancers/me/ranking/save/` → create snapshot
+- `GET /freelancers/me/ranking/history/` → list snapshots (paginate)
+
+### 8.6 Roadmap
+- `GET /freelancers/me/roadmap/`
+- `POST /freelancers/me/roadmap/`
+- `PATCH /freelancers/me/roadmap/{uuid}/`
+- `DELETE /freelancers/me/roadmap/{uuid}/`
+- `POST /freelancers/me/roadmap/{uuid}/toggle/`
+
+### 8.7 Comparisons
+- `GET /freelancers/me/comparisons/`
+- `POST /freelancers/me/comparisons/`
+- `GET /freelancers/me/comparisons/{uuid}/`
+- `DELETE /freelancers/me/comparisons/{uuid}/`
+
+### 8.8 Sentiment Reviews
+- `GET /freelancers/me/feedback/`
+- `POST /freelancers/me/feedback/` (body: `{text}`)
+- `DELETE /freelancers/me/feedback/{uuid}/`
+- `GET /freelancers/me/feedback/aggregate/`
+- `GET /freelancers/me/feedback/export/` (query `format=csv`)
+
+### 8.9 Mentorship
+- `GET /mentorship/requests/?mine=true` (requester view)
+- `POST /mentorship/requests/`
+- `GET /mentorship/requests/{uuid}/`
+- `PATCH /mentorship/requests/{uuid}/` (mentor sets status/assignment)
+- `GET /mentorship/dashboard/requests/` (mentor aggregated view)
+- `POST /mentorship/requests/{uuid}/messages/`
+- `GET /mentorship/requests/{uuid}/messages/`
+
+### 8.10 Industries
+- `GET /industries/`
+- `GET /industries/{slug}/`
+
+### 8.11 Dashboard
+- `GET /freelancers/me/dashboard/` → merged object {profile, ranking, roadmap_progress, next_milestones:[...]}
+
+### 8.12 Suggestions
+- `GET /freelancers/suggestions/?role=frontend&limit=5` → competitor suggestions (placeholder logic)
+
+### 8.13 System
+- `GET /system/rate-limit/` → remaining quotas (optional)
+
+---
+## 9. Example JSON Schemas
+Use `camel_case` in frontend; backend may serve `snake_case`. Provide consistent serializer naming or transform.
+
+### 9.1 FreelancerProfile Response
+```
+{
+  "user_id": "8c7d...",
+  "profile_completeness": 72,
+  "proposal_success_rate": 18,
+  "hourly_rate": 45,
+  "portfolio_items": 8,
+  "repeat_clients_rate": 25,
+  "skills": ["React", "TypeScript", "Node.js", "UI/UX Design"],
+  "updated_at": "2025-11-25T09:15:00Z"
+}
+```
+
+### 9.2 Ranking Response
+```
+{
+  "current": 68,
+  "previous": 64,
+  "improvement": 4,
+  "breakdown": {
+    "profile_completeness": 18,
+    "proposal_success": 30,
+    "portfolio": 12,
+    "repeat_clients": 10,
+    "milestone_bonus": 5
   }
 }
 ```
-Common status codes: 400 (validation), 401 (unauthenticated), 403 (forbidden), 404 (not found), 409 (conflict), 422 (semantic), 429 (rate limit), 500 (server).
 
-## Domain Schemas (Frontend Expectations)
-These derive from `src/types/domain.ts` and extended UI needs.
-
-```jsonc
-// User
+### 9.3 RoadmapMilestone
+```
 {
-  "id": "string",          // UUID
-  "name": "string",
-  "email": "string",       // unique
-  "createdAt": "string"    // ISO timestamp
-}
-
-// FreelancerMetrics
-{
-  "profileCompleteness": 0,  // number (0-100)
-  "profileViews": 0,         // integer
-  "proposalSuccessRate": 0,  // % integer 0-100
-  "jobInvitations": 0,       // integer
-  "hourlyRate": 0,           // number (USD)
-  "skills": ["React", "TypeScript"], // array of strings
-  "portfolioItems": 0,       // integer count
-  "repeatClientsRate": 0     // % integer 0-100
-}
-
-// ComparisonResult
-{
-  "userMetrics": <FreelancerMetrics>,
-  "topFreelancersAverage": <FreelancerMetrics>,
-  "competitorMetrics": <FreelancerMetrics | null>,
-  "pseudoRanking": 0,        // integer 0-100 (derived)
-  "tier": "Emerging" | "Competitive" | "Top-tier ready"
-}
-
-// RoadmapMilestone
-{
-  "id": "string",            // UUID
-  "title": "string",
-  "description": "string",
-  "estimatedEffort": "string", // e.g. "2h", "Medium"
+  "id": "3d91...",
+  "title": "Fix Profile Basics",
+  "description": "Complete your headline, overview, and add 3 strong portfolio items",
+  "estimated_effort": "2-3 days",
   "completed": false,
   "order": 1
 }
+```
 
-// SWOT item (UI groups by category; backend returns canonical list)
+### 9.4 ComparisonEntry
+```
 {
-  "category": "Strength" | "Weakness" | "Opportunity" | "Threat",
-  "title": "string",
-  "description": "string"
+  "id": "ab12...",
+  "competitor_identifier": "freelancer:top_user_123",
+  "competitor_role": "frontend",
+  "pseudo_ranking": 72,
+  "snapshot": {
+    "profile_completeness": 72,
+    "proposal_success_rate": 18,
+    "portfolio_items": 8,
+    "hourly_rate": 45,
+    "repeat_clients_rate": 25
+  },
+  "created_at": "2025-11-25T09:28:11Z"
 }
 ```
 
-Additional derived frontend blocks:
-```jsonc
-// Suggestion Item
-{ "title": "Learn Next.js", "impact": "High", "effort": "Medium" }
-
-// Trending Skill Entry
-{ "name": "Next.js", "demand": "Very High" }
+### 9.5 SentimentReview
 ```
-
----
-## 1. Authentication & User
-### 1.1 Register
-POST `/auth/register` (public)
-```json
-{ "name": "string", "email": "string", "password": "string" }
-```
-Responses:
-- 201 Created:
-```json
-{ "user": <User>, "token": "jwt-string" }
-```
-- 409 if email exists.
-
-### 1.2 Login
-POST `/auth/login` (public)
-```json
-{ "email": "string", "password": "string" }
-```
-200 OK:
-```json
-{ "user": <User>, "token": "jwt-string" }
-```
-
-### 1.3 Get Current User
-GET `/auth/me` (auth)
-200 OK:
-```json
-{ "user": <User> }
-```
-
-### 1.4 Logout
-POST `/auth/logout` (auth) – invalidates JWT (if using server blacklist) or returns 204 No Content.
-
-### 1.5 OAuth Begin / Callback (Optional Future)
-- GET `/auth/oauth/:provider/redirect`
-- GET `/auth/oauth/:provider/callback?code=...`
-Front-end expects standardized redirect final payload identical to login response.
-
----
-## 2. Industry Selection / Onboarding
-### 2.1 List Industries
-GET `/industries` (public)
-200 OK:
-```json
-{ "industries": [ { "name": "Freelancer", "available": true }, { "name": "E-commerce", "available": false } ] }
-```
-
-### 2.2 Select Industry
-POST `/user/industry` (auth)
-```json
-{ "industry": "Freelancer" }
-```
-200 OK:
-```json
-{ "selectedIndustry": "Freelancer" }
-```
-Valid values: `Freelancer`, `E-commerce`, `Developer`, `Business`.
-
-### 2.3 Join Waitlist (for unavailable industry)
-POST `/waitlist` (public)
-```json
-{ "email": "string", "industry": "E-commerce" }
-```
-202 Accepted:
-```json
-{ "status": "queued" }
-```
-
----
-## 3. Freelancer Profile & Metrics
-### 3.1 Get Profile Metrics
-GET `/freelancer/profile` (auth)
-200 OK:
-```json
-{ "metrics": <FreelancerMetrics> }
-```
-If absent backend initializes defaults.
-
-### 3.2 Update Profile Metrics (Partial)
-PATCH `/freelancer/profile` (auth)
-Body allows any subset of metrics except derived fields:
-```json
-{ "hourlyRate": 80, "skills": ["React", "TypeScript", "Next.js"], "profileCompleteness": 76 }
-```
-200 OK returns full metrics.
-
-### 3.3 Manage Skills
-- POST `/freelancer/skills`:
-```json
-{ "skills": ["Docker", "CI/CD"] }
-```
-Returns updated list.
-- DELETE `/freelancer/skills/:skill` removes skill by exact match (URL encoded). 204 No Content.
-
-### 3.4 Increment View / Invitation Counters (optional instrumentation)
-POST `/freelancer/profile/views` – increments `profileViews`. 202 Accepted.
-POST `/freelancer/profile/invitations` – increments `jobInvitations`. 202 Accepted.
-
-### 3.5 Pseudo Ranking (Calculated)
-GET `/freelancer/pseudo-ranking`
-200 OK:
-```json
-{ "pseudoRanking": 72, "tier": "Competitive" }
-```
-Backend formula should approximate frontend logic (weights from `ProfileComparisonPage.tsx`).
-
----
-## 4. Comparison Engine
-### 4.1 Compare Against Market / Competitor
-GET `/freelancer/comparison?role=web-developer&competitorUrl=https://...` (auth)
-Query Params:
-- `role` (required) – one of: `web-developer`, `graphic-designer`, `content-writer`, `marketing`.
-- `competitorUrl` (optional) – public profile URL to fetch competitor metrics (scraped or stubbed).
-200 OK:
-```json
 {
-  "comparison": <ComparisonResult>,
-  "userScore": 68,               // raw aggregated score used for positioning bar
-  "ranges": { "emerging": [0,59], "competitive": [60,79], "topTier": [80,100] }
-}
-```
-404 if competitorUrl invalid/unreachable (still return averages without competitorMetrics).
-
----
-## 5. Insights & AI Coach
-### 5.1 SWOT & Suggestions
-GET `/freelancer/insights` (auth)
-200 OK:
-```json
-{
-  "swot": [ { "category": "Strength", "title": "Strong React portfolio", "description": "..." } ],
-  "suggestions": [ { "title": "Learn Next.js", "impact": "High", "effort": "Medium" } ],
-  "trendingSkills": [ { "name": "Next.js", "demand": "Very High" } ],
-  "focusRecommendation": "Prioritize Next.js and Node.js to become full-stack."
+  "id": "fb_123",
+  "text": "Great communication and fast delivery, minor issues with final polish.",
+  "score": 0.76,
+  "label": "positive",
+  "categories": ["communication", "quality"],
+  "suggestions": ["Provide structured progress updates"],
+  "created_at": "2025-11-25T09:30:00Z"
 }
 ```
 
-### 5.2 Regenerate Insights (Optional heavier AI call)
-POST `/freelancer/insights/regenerate`
-Body (optional filters):
-```json
-{ "focus": "frontend", "limit": 5 }
+### 9.6 Sentiment Aggregate
 ```
-202 Accepted:
-```json
-{ "status": "processing", "requestId": "uuid" }
-```
-Later: GET `/freelancer/insights/status?requestId=uuid` → deliver same schema as 5.1 once ready.
-
----
-## 6. Roadmap Management
-### 6.1 List Milestones
-GET `/freelancer/roadmap` (auth)
-200 OK:
-```json
-{ "milestones": [ <RoadmapMilestone>, ... ], "progress": { "completed": 3, "total": 8, "percent": 37.5 } }
-```
-
-### 6.2 Create Milestone
-POST `/freelancer/roadmap/milestones`
-```json
-{ "title": "Add case study project", "description": "Write detailed metrics", "estimatedEffort": "3h" }
-```
-201 Created:
-```json
-{ "milestone": <RoadmapMilestone> }
-```
-Backend assigns `order` sequentially.
-
-### 6.3 Update Milestone
-PATCH `/freelancer/roadmap/milestones/:id`
-```json
-{ "title": "Refine case study", "completed": true }
-```
-200 OK returns updated milestone.
-
-### 6.4 Reorder Milestones
-PATCH `/freelancer/roadmap/milestones/reorder`
-```json
-{ "orders": [ { "id": "uuid-1", "order": 1 }, { "id": "uuid-2", "order": 2 } ] }
-```
-200 OK:
-```json
-{ "milestones": [ ...reordered... ] }
-```
-
-### 6.5 Delete Milestone
-DELETE `/freelancer/roadmap/milestones/:id` → 204 No Content.
-
-### 6.6 Roadmap Progress Snapshot (optional explicit)
-GET `/freelancer/roadmap/progress`
-200 OK:
-```json
-{ "completed": 3, "total": 8, "percent": 37.5 }
-```
-
----
-## 7. Re-evaluation Flow
-### 7.1 Trigger Re-evaluation
-POST `/freelancer/re-evaluation` (auth)
-Body (optional if user indicates which improvements applied):
-```json
-{ "appliedMilestoneIds": ["uuid-1", "uuid-2"], "profileChanges": { "portfolioItems": 12, "proposalSuccessRate": 22 } }
-```
-200 OK:
-```json
 {
-  "previousRanking": 68,
-  "newRanking": 76,
-  "improvement": 8,
-  "changedMetrics": [
-    { "label": "Portfolio Items", "previous": 8, "current": 12, "unit": "projects" },
-    { "label": "Proposal Success Rate", "previous": 18, "current": 22, "unit": "%" }
-  ]
+  "positives": 12,
+  "neutrals": 5,
+  "negatives": 3,
+  "avg_score": 0.44,
+  "top_categories": ["communication", "quality", "responsiveness"],
+  "actionable_suggestions": ["Provide structured progress updates", "Ask for a brief quality score"]
 }
 ```
 
-### 7.2 Historical Evaluations (optional future)
-GET `/freelancer/re-evaluation/history`
-200 OK:
-```json
-{ "evaluations": [ { "previousRanking": 60, "newRanking": 68, "improvement": 8, "createdAt": "2025-11-01T10:00:00Z" } ] }
+### 9.7 MentorshipRequest
 ```
-
----
-## 8. Telemetry & Analytics (Optional Future)
-(Frontend might call these; define now for backend planning.)
-- POST `/telemetry/event` – generic usage events.
-```json
-{ "type": "compare_opened", "context": { "role": "web-developer" }, "occurredAt": "2025-11-24T10:00:00Z" }
-```
-Return 202 Accepted.
-
----
-## 9. Pagination Meta Example
-For list endpoints with pagination:
-```json
 {
-  "milestones": [ ... ],
-  "meta": { "page": 1, "pageSize": 20, "totalPages": 3, "totalItems": 58 }
+  "id": "req_456",
+  "topic": "Improve React performance patterns",
+  "context": "I have 3 years experience; need guidance on scaling large component trees",
+  "preferred_expertise": ["Senior Frontend", "Performance"],
+  "status": "pending",
+  "requester_id": "8c7d...",
+  "mentor_id": null,
+  "created_at": "2025-11-25T09:40:00Z",
+  "updated_at": "2025-11-25T09:40:00Z"
+}
+```
+
+### 9.8 MentorshipMessage
+```
+{
+  "id": "msg_789",
+  "request_id": "req_456",
+  "sender_id": "8c7d...",
+  "text": "Thanks for the initial guidance, could you review my memo?",
+  "created_at": "2025-11-25T09:55:00Z"
+}
+```
+
+### 9.9 Dashboard
+```
+{
+  "profile": { ... },
+  "ranking": { ... },
+  "roadmap_progress": {"completed": 2, "total": 5, "percent": 40.0},
+  "next_milestones": [ {"id": "...", "title": "Skill Upgrade"} ]
 }
 ```
 
 ---
-## 10. Rate Limiting (Recommendation)
-If enforced, include headers:
-- `X-RateLimit-Limit`
-- `X-RateLimit-Remaining`
-- `X-RateLimit-Reset` (epoch seconds)
-429 body uses standard error format with `code = "RATE_LIMIT"`.
+## 10. Validation Rules
+- Rates & percentages clamped (0–100 where applicable).
+- Skills: max length 60 per item; maximum 50 skills.
+- Roadmap order positive; cannot duplicate order for same user.
+- Sentiment text length: 10–5000 chars.
+- Mentorship context length max 5000.
+- Comparison snapshot fields must be numeric integers or positive small ints.
 
 ---
-## 11. Security / Auth Notes
-- Passwords hashed with Argon2 or bcrypt (not exposed).
-- JWT expiry recommended (e.g. 1h) + refresh token flow (future: `/auth/refresh`).
-- All POST/PATCH endpoints validate ownership (user cannot mutate other users' data).
-
----
-## 12. Example Frontend Flows
-### Registration → Industry Selection → Dashboard
-1. `POST /auth/register` → store token.
-2. `GET /industries` → show options.
-3. `POST /user/industry` with `{ "industry": "Freelancer" }`.
-4. `GET /freelancer/profile` (initialize defaults if new).
-5. `GET /freelancer/pseudo-ranking`.
-6. Render dashboard cards.
-
-### Comparison Flow
-1. `GET /freelancer/profile`
-2. `GET /freelancer/comparison?role=web-developer` (optionally with competitorUrl).
-3. Display metrics, tier, ranges.
-
-### Insights Flow
-1. `GET /freelancer/insights`.
-2. Optionally `POST /freelancer/insights/regenerate` for updated list.
-
-### Roadmap Update Flow
-1. `GET /freelancer/roadmap`.
-2. User toggles completion → `PATCH /freelancer/roadmap/milestones/:id { "completed": true }`.
-3. Refresh progress bar.
-
-### Re-evaluation Flow
-1. `POST /freelancer/re-evaluation` with applied changes.
-2. Display before/after and improvement.
-
----
-## 13. Future Extensions (Placeholders)
-| Area | Endpoint Idea | Notes |
-|------|---------------|-------|
-| Portfolio Items | `/freelancer/portfolio` CRUD | Detailed case studies, metrics. |
-| Notifications | `/notifications` | Real-time push (WebSocket). |
-| Competitor Scrape | `/freelancer/competitor/fetch` | Async job to parse external profile. |
-| Refresh Token | `/auth/refresh` | Extend session securely. |
-| Admin | `/admin/users` | Management & moderation. |
-
----
-## 14. Test Data Guidelines
-For development, backend may seed a default profile:
-```json
+## 11. Error Format
+Consistent DRF error envelope:
+```
 {
-  "profileCompleteness": 72,
-  "profileViews": 120,
-  "proposalSuccessRate": 18,
-  "jobInvitations": 4,
-  "hourlyRate": 55,
-  "skills": ["React", "TypeScript", "Tailwind"],
-  "portfolioItems": 8,
-  "repeatClientsRate": 25
+  "error": {
+    "code": "validation_error",
+    "detail": "Portfolio items must be >= 0",
+    "fields": {"portfolio_items": ["Ensure this value is greater than or equal to 0."]}
+  }
+}
+```
+Authorization example:
+```
+{
+  "error": {"code": "not_authenticated", "detail": "Authentication credentials were not provided."}
 }
 ```
 
 ---
-## 15. Performance Considerations
-- Cache `/freelancer/insights` for short TTL (e.g. 5m) if AI-generated.
-- Batched updates: allow sending multiple metric changes in one PATCH.
-- Consider ETag / `If-None-Match` for static insights.
+## 12. Rate Limiting (Optional)
+Strategy: IP + User based bucket for sentiment submissions & comparison creation (e.g., 200/day, 100/day). Expose counts at `/system/rate-limit/`.
 
 ---
-## 16. Observability
-Recommended headers returned:
-- `X-Request-Id` – correlation.
-- `X-Processing-Time-ms` – server-side duration.
-Expose health endpoint (not used by frontend UI): `GET /health` → `{ "status": "ok", "uptimeSeconds": 12345 }`.
+## 13. Caching
+- Cache ranking calculations for user (invalidate on profile or milestone change).
+- Aggregate sentiment summary cached (invalidate on new review).
+- Industry list & details cached long-lived.
 
 ---
-## 17. Summary
-This spec enumerates all immediate endpoints required by current frontend pages. Backend should implement core authenticated flows (profile, comparison, insights, roadmap, re-evaluation) first. Optional endpoints marked as future can be stubbed or omitted.
+## 14. Testing Guidelines
+- Model tests: constraints, ordering.
+- Service tests: ranking & sentiment functions.
+- API tests: auth cycle, CRUD on milestones, comparison creation, aggregation endpoints.
+- Permissions tests: mentorship dashboard restricted to `is_mentor` users.
 
-Please raise questions for any ambiguity (e.g., scoring formulas or AI generation). The frontend assumes stable contract once implemented.
+---
+## 15. Security & Privacy
+- Store only text reviews; avoid PII beyond what's provided.
+- Allow user to delete any SentimentReview (hard delete).
+- Ensure mentors cannot view other private user data except request context.
+- Enforce HTTPS & secure cookies for refresh token if using cookie strategy.
+
+---
+## 16. Deployment Considerations
+- Use separate worker (Celery + Redis) if sentiment analysis becomes asynchronous.
+- Database migrations: create initial schema with apps listed.
+- Observability: add `/health/` and optional `/metrics/` for Prometheus.
+
+---
+## 17. Implementation Order (Recommended)
+1. Accounts & Auth
+2. FreelancerProfile + Roadmap
+3. Ranking service + snapshots
+4. Comparisons
+5. Sentiment ingestion + aggregation
+6. Mentorship (requests + messages)
+7. Industries
+8. Dashboard + suggestions
+9. Rate limiting & caching layer
+
+---
+## 18. Open Extensions (Future)
+- WebSocket for mentorship real-time messages
+- Historical trend endpoints for ranking & sentiment
+- Multi-industry support with different metrics mapping
+
+---
+## 19. Endpoint Inventory Quick Reference
+(See `api.http` for examples)
+```
+GET  /health/
+POST /auth/register/
+POST /auth/login/
+POST /auth/refresh/
+POST /auth/logout/
+GET  /auth/me/
+GET  /users/{id}/
+PATCH /users/me/
+GET  /freelancers/me/profile/
+PATCH /freelancers/me/profile/
+GET  /freelancers/{id}/profile/ (optional public)
+GET  /freelancers/me/ranking/
+POST /freelancers/me/ranking/save/
+GET  /freelancers/me/ranking/history/
+GET  /freelancers/me/roadmap/
+POST /freelancers/me/roadmap/
+PATCH /freelancers/me/roadmap/{uuid}/
+DELETE /freelancers/me/roadmap/{uuid}/
+POST /freelancers/me/roadmap/{uuid}/toggle/
+GET  /freelancers/me/comparisons/
+POST /freelancers/me/comparisons/
+GET  /freelancers/me/comparisons/{uuid}/
+DELETE /freelancers/me/comparisons/{uuid}/
+GET  /freelancers/me/feedback/
+POST /freelancers/me/feedback/
+DELETE /freelancers/me/feedback/{uuid}/
+GET  /freelancers/me/feedback/aggregate/
+GET  /freelancers/me/feedback/export/
+GET  /mentorship/requests/
+POST /mentorship/requests/
+GET  /mentorship/requests/{uuid}/
+PATCH /mentorship/requests/{uuid}/
+GET  /mentorship/dashboard/requests/
+POST /mentorship/requests/{uuid}/messages/
+GET  /mentorship/requests/{uuid}/messages/
+GET  /industries/
+GET  /industries/{slug}/
+GET  /freelancers/me/dashboard/
+GET  /freelancers/suggestions/
+GET  /system/rate-limit/
+```
+
+---
+## 20. Feeding to an LLM
+Provide this entire file + `api.http`. Instruct LLM:
+"Generate Django apps & models as defined. Implement DRF viewsets/routers for each REST endpoint (read-only where noted). Include JWT auth with simplejwt, custom permissions, and full serializer coverage. Add ranking & sentiment service functions. Ensure responses match provided JSON schemas and error contract." Use incremental generation by section to avoid token limits.
+
+---
+## 21. License / IP Notice
+All specifications proprietary to FairFound project; do not expose externally without approval.
+
+---
+End of specification.

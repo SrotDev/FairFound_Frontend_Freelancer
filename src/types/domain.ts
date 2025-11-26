@@ -48,3 +48,16 @@ export interface AppState {
   roadmapMilestones: RoadmapMilestone[];
   previousPseudoRanking: number | null;
 }
+
+// Sentiment analysis types
+export type SentimentLabel = "positive" | "neutral" | "negative";
+
+export interface SentimentReview {
+  id: string;
+  text: string;
+  createdAt: Date;
+  score: number; // normalized -1 to 1
+  label: SentimentLabel;
+  categories: string[]; // extracted thematic categories (e.g., communication, quality, responsiveness)
+  suggestions: string[]; // actionable recommendations derived from categories + sentiment
+}

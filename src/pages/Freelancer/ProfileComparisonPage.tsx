@@ -8,12 +8,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAppContext } from "@/context/AppContext";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, TrendingUp, TrendingDown } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
+import { useComparisonHistory } from "@/hooks/use-comparison-history";
 
 const ProfileComparisonPage = () => {
   const navigate = useNavigate();
   const { freelancerProfile } = useAppContext();
+    const { addEntry } = useComparisonHistory();
   const [competitorUrl, setCompetitorUrl] = useState("");
   const [selectedRole, setSelectedRole] = useState("web-developer");
+  const [selectedCompetitor, setSelectedCompetitor] = useState<string | null>(null);
+  const [comparisonStarted, setComparisonStarted] = useState(false);
+
+  const suggestedCompetitors = (
+    role: string
+  ): { tier: "Top" | "Mid" | "Low"; name: string; url: string }[] => {
+    const base = role.replace(/-/g, " ");
+    const make = (tier: "Top" | "Mid" | "Low", i: number) => ({
+      tier,
+      name: `${base} Freelancer ${i + 1}`,
+      url: `https://marketplace.example/${role}/${tier.toLowerCase()}-${i + 1}`,
+    });
+    return [
+      ...Array.from({ length: 2 }, (_, i) => make("Top", i)),
+      ...Array.from({ length: 2 }, (_, i) => make("Mid", i)),
+      ...Array.from({ length: 2 }, (_, i) => make("Low", i)),
+    ];
+  };
 
   const topFreelancersAverage = {
     profileCompleteness: 92,
@@ -42,6 +64,14 @@ const ProfileComparisonPage = () => {
   const userScore = calculateUserScore();
   const userTier = getTier(userScore);
 
+  const comparisonData = [
+    { metric: "Completeness", You: freelancerProfile.profileCompleteness, Top: topFreelancersAverage.profileCompleteness },
+    { metric: "Proposals", You: freelancerProfile.proposalSuccessRate, Top: topFreelancersAverage.proposalSuccessRate },
+    { metric: "Portfolio", You: freelancerProfile.portfolioItems, Top: topFreelancersAverage.portfolioItems },
+    { metric: "Hourly $", You: freelancerProfile.hourlyRate, Top: topFreelancersAverage.hourlyRate },
+    { metric: "Repeat %", You: freelancerProfile.repeatClientsRate, Top: topFreelancersAverage.repeatClientsRate },
+  ];
+
   return (
     <div className="container py-12">
       <div className="mx-auto max-w-6xl">
@@ -53,46 +83,96 @@ const ProfileComparisonPage = () => {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="p-6 lg:col-span-1">
-            <h3 className="mb-4 text-lg font-semibold">Configuration</h3>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="role">Market / Role</Label>
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger id="role">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="web-developer">Web Developer</SelectItem>
-                    <SelectItem value="graphic-designer">Graphic Designer</SelectItem>
-                    <SelectItem value="content-writer">Content Writer</SelectItem>
-                    <SelectItem value="marketing">Marketing Specialist</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <Card className="p-6 lg:col-span-1 space-y-6">
+            <div>
+              <h3 className="mb-2 text-lg font-semibold">Market / Role</h3>
+              <Select value={selectedRole} onValueChange={(v) => { setSelectedRole(v); setSelectedCompetitor(null); }}>
+                <SelectTrigger id="role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="web-developer">Web Developer</SelectItem>
+                  <SelectItem value="graphic-designer">Graphic Designer</SelectItem>
+                  <SelectItem value="content-writer">Content Writer</SelectItem>
+                  <SelectItem value="marketing">Marketing Specialist</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div>
-                <Label htmlFor="competitor-url">Competitor Profile URL (Optional)</Label>
-                <Input
-                  id="competitor-url"
-                  placeholder="https://..."
-                  value={competitorUrl}
-                  onChange={(e) => setCompetitorUrl(e.target.value)}
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Enter a public profile URL to compare directly
-                </p>
-              </div>
-
-              <div className="rounded-lg bg-muted/50 p-4">
-                <h4 className="mb-2 text-sm font-semibold">Your Current Standing</h4>
-                <Badge className={userTier.color}>{userTier.label}</Badge>
+            <div>
+              <h3 className="mb-2 text-lg font-semibold">Suggested Competitors</h3>
+              <div className="space-y-3">
+                {(["Top","Mid","Low"] as const).map((tier) => (
+                  <div key={tier}>
+                    <div className="mb-2 text-xs font-medium text-muted-foreground">{tier} tier</div>
+                    <div className="grid gap-2">
+                      {suggestedCompetitors(selectedRole)
+                        .filter((c) => c.tier === tier)
+                        .map((c) => (
+                          <button
+                            key={c.url}
+                            className={`w-full rounded-md border px-3 py-2 text-left transition-colors ${
+                              selectedCompetitor === c.url ? "border-accent bg-accent/10" : "hover:bg-muted"
+                            }`}
+                            onClick={() => setSelectedCompetitor(c.url)}
+                            title={c.name}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm truncate">{c.name}</span>
+                              <span className="text-xs text-muted-foreground">Select</span>
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
+
+            <div>
+              <h3 className="mb-2 text-lg font-semibold">Or Compare via URL</h3>
+              <Input
+                id="competitor-url"
+                placeholder="https://marketplace.com/profile/username"
+                value={competitorUrl}
+                onChange={(e) => { setCompetitorUrl(e.target.value); if (e.target.value) setSelectedCompetitor(null); }}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">Paste a public profile URL to compare directly.</p>
+            </div>
+
+            <div className="rounded-lg bg-muted/50 p-4">
+              <h4 className="mb-2 text-sm font-semibold">Your Current Standing</h4>
+              <Badge className={userTier.color}>{userTier.label}</Badge>
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={() => {
+                const chosenUrl = selectedCompetitor ?? (competitorUrl || undefined);
+                addEntry({
+                  role: selectedRole,
+                  userMetrics: freelancerProfile,
+                  topFreelancersAverage,
+                  userScore,
+                  competitorUrl: chosenUrl || undefined,
+                });
+                setComparisonStarted(true);
+              }}
+            >
+              Start Comparison
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </Card>
 
           <div className="lg:col-span-2 space-y-6">
-            <Card className="overflow-hidden">
+            {!comparisonStarted ? (
+            <Card className="p-8 text-center lg:col-span-2">
+              <h3 className="mb-2 text-xl font-semibold">No comparison yet</h3>
+              <p className="text-muted-foreground">Choose a suggested competitor or paste a profile URL in the sidebar, then click Start Comparison.</p>
+            </Card>
+            ) : (
+            <>
+            <Card className="overflow-hidden lg:col-span-2">
               <div className="bg-gradient-to-r from-accent/10 to-accent/5 p-6">
                 <h3 className="text-xl font-bold">Comparison Results</h3>
                 <p className="text-sm text-muted-foreground">
@@ -137,6 +217,61 @@ const ProfileComparisonPage = () => {
               </div>
             </Card>
 
+            <Card className="p-6 lg:col-span-2">
+              <h3 className="mb-4 text-lg font-semibold">Visualizations</h3>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div>
+                  <ChartContainer
+                    config={{
+                      You: { label: "You", color: "hsl(var(--chart-1))" },
+                      Top: { label: "Top Avg", color: "hsl(var(--chart-2))" },
+                    }}
+                    className="aspect-[4/3]"
+                  >
+                    <BarChart data={comparisonData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="metric" />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="You" fill="var(--color-You)" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="Top" fill="var(--color-Top)" radius={[6, 6, 0, 0]} />
+                      <ChartLegend content={<ChartLegendContent />} />
+                    </BarChart>
+                  </ChartContainer>
+                </div>
+                <div>
+                  <ChartContainer
+                    config={{
+                      You: { label: "You", color: "hsl(var(--chart-1))" },
+                      Top: { label: "Top Avg", color: "hsl(var(--chart-2))" },
+                    }}
+                    className="aspect-[4/3]"
+                  >
+                    <RadarChart data={comparisonData}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="metric" />
+                      <PolarRadiusAxis />
+                      <Radar name="You" dataKey="You" stroke="var(--color-You)" fill="var(--color-You)" fillOpacity={0.6} />
+                      <Radar name="Top" dataKey="Top" stroke="var(--color-Top)" fill="var(--color-Top)" fillOpacity={0.3} />
+                      <ChartLegend content={<ChartLegendContent />} />
+                    </RadarChart>
+                  </ChartContainer>
+                </div>
+              </div>
+            </Card>
+            <div className="lg:col-span-2">
+              <Button
+                size="lg"
+                className="mt-4 w-full"
+                onClick={() => navigate("/freelancer/insights")}
+              >
+                View Insights
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+            </>
+            )}
+
             <Card className="p-6">
               <h3 className="mb-4 text-lg font-semibold">Relative Position</h3>
               <div className="space-y-4">
@@ -163,14 +298,7 @@ const ProfileComparisonPage = () => {
               </div>
             </Card>
 
-            <Button
-              size="lg"
-              className="w-full"
-              onClick={() => navigate("/freelancer/insights")}
-            >
-              Get AI-Powered Insights
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+              
           </div>
         </div>
       </div>

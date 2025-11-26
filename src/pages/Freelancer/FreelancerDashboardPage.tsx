@@ -5,6 +5,8 @@ import { StatCard } from "@/components/ui/stat-card";
 import { PseudoRankingBadge } from "@/components/freelancer/PseudoRankingBadge";
 import { useAppContext } from "@/context/AppContext";
 import { Eye, TrendingUp, Target, Mail, ArrowRight, ClipboardList } from "lucide-react";
+import { Users } from "lucide-react";
+import { MessageSquareQuote } from "lucide-react";
 
 const FreelancerDashboardPage = () => {
   const navigate = useNavigate();
@@ -20,15 +22,66 @@ const FreelancerDashboardPage = () => {
             Welcome back, {user?.name || "there"}. Here's where you stand today.
           </p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2">
+        <Button
+          variant="outline"
+          className="flex items-center gap-2 border-accent/40 text-accent hover:bg-accent/10
+            dark:border-white/20 dark:text-white dark:hover:bg-white/10"
+          onClick={() => navigate("/freelancer/comparison-history")}
+        >
           <ClipboardList className="h-4 w-4" />
-          See Stats History
+          Comparison History
         </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
+          <Card
+            className="p-6
+            bg-gradient-to-br from-accent/10 via-primary/5 to-secondary/10
+            dark:from-[#0E1422] dark:via-[#1B2540] dark:to-[#2A3960]
+            text-foreground dark:text-white border border-accent/20 dark:border-white/10"
+          >
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h3 className="mb-2 text-xl font-bold">Ready to see how you compare?</h3>
+                <p className="text-muted-foreground dark:text-white/80">
+                  Compare your profile against top freelancers and specific competitors
+                </p>
+              </div>
+              <Button
+                size="lg"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground shrink-0 shadow-md"
+                onClick={() => navigate("/freelancer/compare")}
+              >
+                Compare your profile
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </Card>
+
           <PseudoRankingBadge score={pseudoRanking} />
+
+          {/* Sentiment analysis CTA */}
+          <Card className="p-6 border-primary/30 bg-primary/5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/20 p-2">
+                  <MessageSquareQuote className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="mb-1 text-lg font-bold">Analyze Client Sentiment</h3>
+                  <p className="text-sm text-muted-foreground">Turn raw reviews & comments into improvement actions.</p>
+                </div>
+              </div>
+              <Button
+                className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+                onClick={() => navigate("/freelancer/sentiment")}
+              >
+                Open Sentiment Insights
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </Card>
 
           <div className="grid gap-6 sm:grid-cols-2">
             <StatCard
@@ -60,28 +113,39 @@ const FreelancerDashboardPage = () => {
               trendUp={true}
             />
           </div>
-
-          <Card className="p-6 bg-gradient-to-br from-primary to-secondary text-white">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h3 className="mb-2 text-xl font-bold">Ready to see how you compare?</h3>
-                <p className="text-white/90">
-                  Compare your profile against top freelancers and specific competitors
-                </p>
-              </div>
-              <Button
-                size="lg"
-                className="bg-accent hover:bg-accent/90 text-accent-foreground shrink-0"
-                onClick={() => navigate("/freelancer/compare")}
-              >
-                Compare your profile
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </Card>
+          
         </div>
 
         <div className="space-y-6">
+          {/* Highlighted mentorship CTA (right column) */}
+          <Card
+            className="p-6 bg-gradient-to-br from-yellow-100/60 via-orange-100/40 to-rose-100/50 dark:from-yellow-900/30 dark:via-orange-900/20 dark:to-rose-900/20 border-2 border-yellow-300/50 dark:border-yellow-500/40 shadow-lg"
+          >
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-lg bg-yellow-200/60 p-2 dark:bg-yellow-700/40">
+                  <Users className="h-5 w-5 text-yellow-700 dark:text-yellow-200" />
+                </div>
+                <div>
+                  <h3 className="mb-1 text-xl font-bold">Get Mentorship from Professionals</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Need human guidance? Request mentorship, share context, and chat with pros.
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  size="lg"
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white shadow-md"
+                  onClick={() => navigate("/freelancer/mentorship")}
+                >
+                  Request Mentorship
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+
           <Card className="p-6">
             <h3 className="mb-4 text-lg font-semibold">Your Skills</h3>
             <div className="flex flex-wrap gap-2">

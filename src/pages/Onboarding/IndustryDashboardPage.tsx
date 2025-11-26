@@ -11,9 +11,7 @@ const IndustryDashboardPage = () => {
 
   const handleIndustrySelect = (industry: Industry) => {
     setSelectedIndustry(industry);
-    if (industry === "Freelancer") {
-      navigate("/freelancer/dashboard");
-    }
+    navigate("/register");
   };
 
   const industries = [

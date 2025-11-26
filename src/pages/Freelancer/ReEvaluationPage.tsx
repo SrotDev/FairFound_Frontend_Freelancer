@@ -42,9 +42,7 @@ const ReEvaluationPage = () => {
             Profile Updated
           </div>
           <h1 className="mb-2 text-4xl font-bold">Profile Re-evaluation</h1>
-          <p className="text-muted-foreground">
-            Here's how your changes impact your standing
-          </p>
+          <p className="text-muted-foreground">Here's how your changes impact your standing</p>
         </div>
 
         <Card className="mb-8 p-8 bg-gradient-to-br from-accent/5 to-secondary/5">
@@ -122,7 +120,7 @@ const ReEvaluationPage = () => {
         <Card className="mb-8 p-6 bg-muted/30">
           <h3 className="mb-2 text-lg font-semibold">What This Means</h3>
           <p className="mb-4 text-muted-foreground">
-            Based on your updated profile and roadmap progress, your pseudo-ranking has improved. This
+            Based on your updated profile and roadmap progress, your Fair-Ranking has improved. This
             reflects better profile completeness, stronger portfolio presentation, and alignment with
             market demand.
           </p>

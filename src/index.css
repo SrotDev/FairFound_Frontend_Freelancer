@@ -71,6 +71,14 @@ All colors MUST be HSL.
     --font-sans: Poppins, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
 
     --font-mono: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+
+    /* Chart palette (light) */
+    --chart-1: 217 72% 50%; /* accent blue */
+    --chart-2: 173 58% 39%; /* success teal */
+    --chart-3: 243 70% 60%; /* secondary violet */
+    --chart-4: 25 95% 53%;  /* warning orange */
+    --chart-5: 0 84% 60%;   /* destructive red */
+    --chart-6: 215 16% 47%; /* muted gray */
   }
 
   .dark {
@@ -117,6 +125,14 @@ All colors MUST be HSL.
     --sidebar-ring: 217.2 91.2% 59.8%;
     --font-sans: Poppins, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
     --font-mono: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+
+    /* Chart palette (dark) - higher lightness for contrast */
+    --chart-1: 217 85% 65%;
+    --chart-2: 173 70% 55%;
+    --chart-3: 243 80% 70%;
+    --chart-4: 25 95% 60%;
+    --chart-5: 0 84% 65%;
+    --chart-6: 215 20% 65%;
   }
 }
 

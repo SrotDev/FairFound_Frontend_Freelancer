@@ -32,7 +32,7 @@ export const PseudoRankingBadge = ({ score, size = "lg" }: PseudoRankingBadgePro
     <Card className="p-6 bg-gradient-to-br from-accent/5 to-accent/10 border-accent/20">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-muted-foreground mb-2">Your Pseudo-Ranking</p>
+          <p className="text-sm font-medium text-muted-foreground mb-2">Your Fair-Ranking</p>
           <div className="flex items-baseline gap-2">
             <span className="text-5xl font-bold text-accent">{score}</span>
             <span className="text-2xl text-muted-foreground">/100</span>

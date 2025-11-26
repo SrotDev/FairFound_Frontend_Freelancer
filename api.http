@@ -1,0 +1,324 @@
+# FairFound API Endpoint Collection (REST Client Examples)
+# Base URL variable
+@baseUrl = http://localhost:8000/api/v1
+@authToken = {{authToken}}
+
+### Health Check
+GET {{baseUrl}}/health/
+
+### Authentication
+# Register
+POST {{baseUrl}}/auth/register/
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "password": "Str0ngP@ss!"
+}
+
+### Login
+POST {{baseUrl}}/auth/login/
+Content-Type: application/json
+
+{
+  "email": "jane@example.com",
+  "password": "Str0ngP@ss!"
+}
+
+### Refresh Access Token
+POST {{baseUrl}}/auth/refresh/
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "refresh": "<refresh_token_here>"
+}
+
+### Logout (invalidate refresh)
+POST {{baseUrl}}/auth/logout/
+Authorization: Bearer {{authToken}}
+
+### Get Current User
+GET {{baseUrl}}/auth/me/
+Authorization: Bearer {{authToken}}
+
+### Users
+# Fetch user by id
+GET {{baseUrl}}/users/42/
+Authorization: Bearer {{authToken}}
+
+### Update current user (partial)
+PATCH {{baseUrl}}/users/me/
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Jane Developer"
+}
+
+### Set Selected Industry for Current User
+PATCH {{baseUrl}}/users/me/industry/
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "industry": "Freelancer"
+}
+
+### Freelancer Profile Metrics
+GET {{baseUrl}}/freelancers/me/profile/
+Authorization: Bearer {{authToken}}
+
+### Update Freelancer Profile Metrics
+PATCH {{baseUrl}}/freelancers/me/profile/
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "hourly_rate": 60,
+  "portfolio_items": 10,
+  "proposal_success_rate": 21,
+  "repeat_clients_rate": 28,
+  "skills": ["React", "TypeScript", "Node.js", "UI/UX Design", "Docker"]
+}
+
+### Pseudo Ranking
+GET {{baseUrl}}/freelancers/me/ranking/
+Authorization: Bearer {{authToken}}
+
+### Save Current Ranking Snapshot (sets previous_ranking)
+POST {{baseUrl}}/freelancers/me/ranking/save/
+Authorization: Bearer {{authToken}}
+
+### Roadmap Milestones
+GET {{baseUrl}}/freelancers/me/roadmap/
+Authorization: Bearer {{authToken}}
+
+### Create Milestone
+POST {{baseUrl}}/freelancers/me/roadmap/
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "Optimize Proposal Templates",
+  "description": "Create 3 reusable proposal templates for key niches",
+  "estimated_effort": "3-5 days",
+  "order": 5
+}
+
+### Update Milestone
+PATCH {{baseUrl}}/freelancers/me/roadmap/7/
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "completed": true
+}
+
+### Delete Milestone
+DELETE {{baseUrl}}/freelancers/me/roadmap/7/
+Authorization: Bearer {{authToken}}
+
+### Toggle Milestone (alternative convenience)
+POST {{baseUrl}}/freelancers/me/roadmap/7/toggle/
+Authorization: Bearer {{authToken}}
+
+### Comparison History
+GET {{baseUrl}}/freelancers/me/comparisons/?page=1&page_size=20
+Authorization: Bearer {{authToken}}
+
+### Create Comparison Entry
+POST {{baseUrl}}/freelancers/me/comparisons/
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "competitor_identifier": "freelancer:top_user_123",
+  "competitor_role": "frontend",
+  "snapshot": {
+    "profile_completeness": 72,
+    "proposal_success_rate": 18,
+    "portfolio_items": 8,
+    "hourly_rate": 45,
+    "repeat_clients_rate": 25
+  }
+}
+
+### Get Comparison Detail
+GET {{baseUrl}}/freelancers/me/comparisons/99/
+Authorization: Bearer {{authToken}}
+
+### Delete Comparison Entry
+DELETE {{baseUrl}}/freelancers/me/comparisons/99/
+Authorization: Bearer {{authToken}}
+
+### Clear All Comparison Entries
+DELETE {{baseUrl}}/freelancers/me/comparisons/
+Authorization: Bearer {{authToken}}
+
+### Sentiment Feedback (Client Reviews)
+GET {{baseUrl}}/freelancers/me/feedback/?page=1&page_size=50
+Authorization: Bearer {{authToken}}
+
+### Add Feedback
+POST {{baseUrl}}/freelancers/me/feedback/
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "text": "Great communication and fast delivery, minor issues with final polish." 
+}
+
+### Delete Feedback
+DELETE {{baseUrl}}/freelancers/me/feedback/fb_123/
+Authorization: Bearer {{authToken}}
+
+### Clear All Feedback Items
+DELETE {{baseUrl}}/freelancers/me/feedback/
+Authorization: Bearer {{authToken}}
+
+### Aggregate Sentiment Summary
+GET {{baseUrl}}/freelancers/me/feedback/aggregate/
+Authorization: Bearer {{authToken}}
+
+### Export Feedback CSV
+GET {{baseUrl}}/freelancers/me/feedback/export/?format=csv
+Authorization: Bearer {{authToken}}
+
+### Mentorship Requests (Freelancer side)
+GET {{baseUrl}}/mentorship/requests/?mine=true
+Authorization: Bearer {{authToken}}
+
+### Create Mentorship Request
+POST {{baseUrl}}/mentorship/requests/
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "topic": "Improve React performance patterns",
+  "context": "I have 3 years experience; need guidance on scaling large component trees",
+  "preferred_expertise": ["Senior Frontend", "Performance"]
+}
+
+### Get Single Request
+GET {{baseUrl}}/mentorship/requests/req_456/
+Authorization: Bearer {{authToken}}
+
+### Post Message to Request Thread
+POST {{baseUrl}}/mentorship/requests/req_456/messages/
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "text": "Thanks for the initial guidance, could you review my memo?"
+}
+
+### Professional Mentor Dashboard (list all assigned or open requests)
+GET {{baseUrl}}/mentorship/dashboard/requests/?status=pending
+Authorization: Bearer {{authToken}}
+
+### Update Request Status (mentor accept / reject)
+PATCH {{baseUrl}}/mentorship/requests/req_456/
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "status": "in_progress",
+  "mentor_id": 77
+}
+
+### Industries & Onboarding
+GET {{baseUrl}}/industries/
+
+### Get Industry Detail + Feature Set
+GET {{baseUrl}}/industries/freelancer/
+
+### Dashboard Aggregate (combined metrics + roadmap progress + ranking)
+GET {{baseUrl}}/freelancers/me/dashboard/
+Authorization: Bearer {{authToken}}
+
+### Suggested Competitors
+GET {{baseUrl}}/freelancers/suggestions/?role=frontend&limit=5
+Authorization: Bearer {{authToken}}
+
+### System - Rate Limiting Status (optional)
+GET {{baseUrl}}/system/rate-limit/
+Authorization: Bearer {{authToken}}
+
+### Example Response Bodies (abridged)
+# Current User Response
+# {
+#   "id": 42,
+#   "name": "Jane Developer",
+#   "email": "jane@example.com",
+#   "created_at": "2025-11-25T09:12:44Z"
+# }
+# Freelancer Profile Response
+# {
+#   "user_id": 42,
+#   "profile_completeness": 72,
+#   "proposal_success_rate": 18,
+#   "hourly_rate": 45,
+#   "portfolio_items": 8,
+#   "repeat_clients_rate": 25,
+#   "skills": ["React","TypeScript","Node.js","UI/UX Design"],
+#   "updated_at": "2025-11-25T09:15:00Z"
+# }
+# Ranking Response
+# {
+#   "current": 68,
+#   "previous": 64,
+#   "improvement": 4,
+#   "calculation_breakdown": {
+#     "profile_completeness": 18,
+#     "proposal_success": 30,
+#     "portfolio": 12,
+#     "repeat_clients": 10,
+#     "milestone_bonus": 5
+#   }
+# }
+# Roadmap List Response
+# [
+#   {"id":1,"title":"Fix Profile Basics","description":"Complete headline...","estimated_effort":"2-3 days","completed":false,"order":1},
+#   {"id":2,"title":"Skill Upgrade","description":"Complete a course...","estimated_effort":"1-2 weeks","completed":false,"order":2}
+# ]
+# Comparison Entry Response
+# {
+#   "id":99,
+#   "competitor_identifier":"freelancer:top_user_123",
+#   "competitor_role":"frontend",
+#   "pseudo_ranking":72,
+#   "snapshot": {"profile_completeness":72,"proposal_success_rate":18,"portfolio_items":8,"hourly_rate":45,"repeat_clients_rate":25},
+#   "created_at":"2025-11-25T09:28:11Z"
+# }
+# Sentiment Review Response
+# {
+#   "id":"fb_123",
+#   "text":"Great communication...",
+#   "created_at":"2025-11-25T09:30:00Z",
+#   "score":0.76,
+#   "label":"positive",
+#   "categories":["communication","quality"],
+#   "suggestions":["Provide structured progress updates" ]
+# }
+# Sentiment Aggregate Response
+# {
+#   "positives":12,
+#   "neutrals":5,
+#   "negatives":3,
+#   "avg_score":0.44,
+#   "top_categories":["communication","quality","responsiveness"],
+#   "actionable_suggestions":["Provide structured progress updates","Ask for a brief quality score"]
+# }
+# Mentorship Request Response
+# {
+#   "id":"req_456",
+#   "topic":"Improve React performance patterns",
+#   "context":"I have 3 years experience...",
+#   "status":"pending",
+#   "requester_id":42,
+#   "mentor_id":null,
+#   "preferred_expertise":["Senior Frontend","Performance"],
+#   "created_at":"2025-11-25T09:40:00Z"
+# }
