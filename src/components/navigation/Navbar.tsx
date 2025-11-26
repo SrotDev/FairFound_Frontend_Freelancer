@@ -36,7 +36,7 @@ const Navbar = () => {
 
           {user ? (
             <>
-              <Button variant="ghost" asChild>
+              <Button variant="ghost" className="dark:text-white dark:hover:bg-cyan-900" asChild>
                 <Link to="/freelancer/dashboard">Dashboard</Link>
               </Button>
               <Link to="/freelancer/profile" className="flex items-center gap-2 group">

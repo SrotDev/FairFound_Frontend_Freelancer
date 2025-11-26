@@ -14,6 +14,11 @@ import ProfileComparisonPage from "@/pages/Freelancer/ProfileComparisonPage";
 import InsightsPage from "@/pages/Freelancer/InsightsPage";
 import CareerRoadmapPage from "@/pages/Freelancer/CareerRoadmapPage";
 import ReEvaluationPage from "@/pages/Freelancer/ReEvaluationPage";
+import SentimentInsightsPage from "@/pages/Freelancer/SentimentInsightsPage";
+import ProfilePage from "@/pages/Freelancer/ProfilePage";
+import MentorshipRequestPage from "@/pages/Freelancer/MentorshipRequestPage";
+import ComparisonHistoryPage from "@/pages/Freelancer/ComparisonHistoryPage";
+import ComparisonDetailPage from "@/pages/Freelancer/ComparisonDetailPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +42,11 @@ const App = () => (
               <Route path="/freelancer/roadmap" element={<CareerRoadmapPage />} />
               <Route path="/freelancer/re-evaluation" element={<ReEvaluationPage />} />
               <Route path="/auth/register" element={<RegistrationPage />} />
+              <Route path="/freelancer/sentiment" element={<SentimentInsightsPage />} />
+              <Route path="/freelancer/profile" element={<ProfilePage />} />
+              <Route path="/freelancer/mentorship" element={<MentorshipRequestPage />} />
+              <Route path="/freelancer/comparisonhistory" element={<ComparisonHistoryPage />} />
+              <Route path="/freelancer/comparedetail" element={<ComparisonDetailPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>
