@@ -3,9 +3,49 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, TrendingUp, AlertCircle, Target, ShieldAlert } from "lucide-react";
+import { useAppContext } from "@/context/AppContext";
+import {
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  ReferenceLine,
+  RadialBarChart,
+  RadialBar,
+} from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 
 const InsightsPage = () => {
   const navigate = useNavigate();
+  const { freelancerProfile } = useAppContext();
+
+  // --- Charts data (mocked from current profile metrics) ---
+  const weeks = ["W-7", "W-6", "W-5", "W-4", "W-3", "W-2", "W-1", "W0"];
+  const weeklyPerformance = weeks.map((w, i) => {
+    const base = 90 + i * 8;
+    const proposals = 3 + (i % 4);
+    const successes = Math.max(0, Math.round(proposals * (0.15 + i * 0.02)));
+    const successRate = Math.round((successes / proposals) * 100);
+    return { week: w, views: base + (i % 3) * 10, proposals, successRate };
+  });
+
+  const skills = freelancerProfile.skills.slice(0, 5);
+  const skillSlices = skills.map((s, idx) => ({ name: s, value: 10 + (idx + 1) * 5 }));
+
+  const hourlyBenchmark = [
+    { name: "You", value: freelancerProfile.hourlyRate },
+    { name: "Market Median", value: 60 },
+  ];
+
+  const repeatRate = freelancerProfile.repeatClientsRate;
 
   const swotData = [
     {
@@ -106,6 +146,113 @@ const InsightsPage = () => {
           <p className="text-muted-foreground">
             A snapshot of your strengths, weaknesses, opportunities, and threats
           </p>
+        </div>
+
+        {/* Performance & Growth */}
+        <div className="mb-8 grid gap-6 md:grid-cols-2">
+          <Card className="p-6">
+            <h3 className="mb-4 text-lg font-semibold">Profile Views (last 8 weeks)</h3>
+            <ChartContainer
+              config={{
+                views: { label: "Views", color: "hsl(var(--chart-1))" },
+              }}
+              className="aspect-[4/3]"
+            >
+              <AreaChart data={weeklyPerformance}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="week" />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Area type="monotone" dataKey="views" stroke="var(--color-views)" fill="var(--color-views)" fillOpacity={0.25} />
+              </AreaChart>
+            </ChartContainer>
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="mb-4 text-lg font-semibold">Proposals vs Success Rate</h3>
+            <ChartContainer
+              config={{
+                proposals: { label: "Proposals", color: "hsl(var(--chart-2))" },
+                successRate: { label: "Success %", color: "hsl(var(--chart-3))" },
+              }}
+              className="aspect-[4/3]"
+            >
+              <LineChart data={weeklyPerformance}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="week" />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Line type="monotone" dataKey="proposals" stroke="var(--color-proposals)" strokeWidth={2} />
+                <Line type="monotone" dataKey="successRate" stroke="var(--color-successRate)" strokeDasharray="4 3" strokeWidth={2} />
+                <ChartLegend content={<ChartLegendContent />} />
+              </LineChart>
+            </ChartContainer>
+          </Card>
+        </div>
+
+        {/* Skills & Monetization */}
+        <div className="mb-8 grid gap-6 md:grid-cols-2">
+          <Card className="p-6">
+            <h3 className="mb-4 text-lg font-semibold">Skills Focus Distribution</h3>
+            <ChartContainer
+              config={{
+                slice1: { label: skills[0], color: "hsl(var(--chart-1))" },
+                slice2: { label: skills[1], color: "hsl(var(--chart-2))" },
+                slice3: { label: skills[2], color: "hsl(var(--chart-3))" },
+                slice4: { label: skills[3], color: "hsl(var(--chart-4))" },
+                slice5: { label: skills[4], color: "hsl(var(--chart-5))" },
+              }}
+              className="aspect-[4/3]"
+            >
+              <PieChart>
+                <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+                <Pie data={skillSlices} dataKey="value" nameKey="name" outerRadius={90} innerRadius={50}>
+                  {skillSlices.map((_, idx) => (
+                    <Cell key={idx} fill={`var(--color-slice${idx + 1})`} />
+                  ))}
+                </Pie>
+                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+              </PieChart>
+            </ChartContainer>
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="mb-4 text-lg font-semibold">Hourly Rate vs Market</h3>
+            <ChartContainer
+              config={{
+                You: { label: "You", color: "hsl(var(--chart-1))" },
+                Market: { label: "Market Median", color: "hsl(var(--chart-2))" },
+              }}
+              className="aspect-[4/3]"
+            >
+              <BarChart data={hourlyBenchmark}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <ReferenceLine y={85} label="Top Quartile" stroke="hsl(var(--chart-3))" strokeDasharray="4 3" />
+                <Bar dataKey="value" fill="var(--color-You)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </Card>
+        </div>
+
+        <div className="mb-8 grid gap-6 md:grid-cols-2">
+          <Card className="p-6">
+            <h3 className="mb-4 text-lg font-semibold">Client Repeat Rate</h3>
+            <ChartContainer
+              config={{
+                repeat: { label: "Repeat %", color: "hsl(var(--chart-4))" },
+              }}
+              className="aspect-[4/3]"
+            >
+              <RadialBarChart startAngle={90} endAngle={-270} innerRadius={60} outerRadius={90} data={[{ name: "repeat", value: repeatRate, fill: "var(--color-repeat)" }]}> 
+                <RadialBar background dataKey="value" cornerRadius={6} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+              </RadialBarChart>
+            </ChartContainer>
+            <p className="mt-2 text-sm text-muted-foreground">Current repeat clients: {repeatRate}%</p>
+          </Card>
         </div>
 
         <div className="mb-8 grid gap-6 md:grid-cols-2">

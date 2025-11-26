@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useComparisonHistory } from "@/hooks/use-comparison-history";
 import { useAppContext } from "@/context/AppContext";
-import { TrendingUp, TrendingDown, ExternalLink, ArrowLeft, RotateCcw } from "lucide-react";
+import { TrendingUp, TrendingDown, ExternalLink, ArrowLeft, RotateCcw, ArrowRight } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 
 const ComparisonDetailPage = () => {
   const { id } = useParams();
@@ -97,6 +99,61 @@ const ComparisonDetailPage = () => {
         </div>
       </Card>
 
+      {/* Visualizations copied from Comparison page */}
+      <Card className="p-6 rounded-xl mb-6">
+        <h3 className="mb-4 text-lg font-semibold">Visualizations</h3>
+        {(() => {
+          const comparisonData = [
+            { metric: "Completeness", You: entry.userMetrics.profileCompleteness, Top: top.profileCompleteness },
+            { metric: "Proposals", You: entry.userMetrics.proposalSuccessRate, Top: top.proposalSuccessRate },
+            { metric: "Portfolio", You: entry.userMetrics.portfolioItems, Top: top.portfolioItems },
+            { metric: "Hourly $", You: entry.userMetrics.hourlyRate, Top: top.hourlyRate },
+            { metric: "Repeat %", You: entry.userMetrics.repeatClientsRate, Top: top.repeatClientsRate },
+          ];
+          return (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div>
+                <ChartContainer
+                  config={{
+                    You: { label: "You", color: "hsl(var(--chart-1))" },
+                    Top: { label: "Top Avg", color: "hsl(var(--chart-2))" },
+                  }}
+                  className="aspect-[4/3]"
+                >
+                  <BarChart data={comparisonData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="metric" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="You" fill="var(--color-You)" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="Top" fill="var(--color-Top)" radius={[6, 6, 0, 0]} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                  </BarChart>
+                </ChartContainer>
+              </div>
+              <div>
+                <ChartContainer
+                  config={{
+                    You: { label: "You", color: "hsl(var(--chart-1))" },
+                    Top: { label: "Top Avg", color: "hsl(var(--chart-2))" },
+                  }}
+                  className="aspect-[4/3]"
+                >
+                  <RadarChart data={comparisonData}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="metric" />
+                    <PolarRadiusAxis />
+                    <Radar name="You" dataKey="You" stroke="var(--color-You)" fill="var(--color-You)" fillOpacity={0.6} />
+                    <Radar name="Top" dataKey="Top" stroke="var(--color-Top)" fill="var(--color-Top)" fillOpacity={0.3} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                  </RadarChart>
+                </ChartContainer>
+              </div>
+            </div>
+          );
+        })()}
+      </Card>
+
       <Card className="p-6 rounded-xl">
         <h3 className="mb-4 text-lg font-semibold">Relative Position</h3>
         <div className="space-y-4">
@@ -122,6 +179,14 @@ const ComparisonDetailPage = () => {
           </div>
         </div>
       </Card>
+
+      <div className="mt-4">
+        <Button size="lg" className="w-full" onClick={() => navigate("/freelancer/insights")}
+        >
+          View Insights
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 };

@@ -13,10 +13,13 @@ import FreelancerDashboardPage from "@/pages/Freelancer/FreelancerDashboardPage"
 import ProfileComparisonPage from "@/pages/Freelancer/ProfileComparisonPage";
 import InsightsPage from "@/pages/Freelancer/InsightsPage";
 import CareerRoadmapPage from "@/pages/Freelancer/CareerRoadmapPage";
-import ReEvaluationPage from "@/pages/Freelancer/ReEvaluationPage";
 import NotFound from "./pages/NotFound";
 import ComparisonHistoryPage from "@/pages/Freelancer/ComparisonHistoryPage";
 import ComparisonDetailPage from "@/pages/Freelancer/ComparisonDetailPage";
+import ProfilePage from "@/pages/Freelancer/ProfilePage";
+import MentorshipRequestPage from "@/pages/Freelancer/MentorshipRequestPage";
+import MentorshipDashboardPage from "@/pages/Professional/MentorshipDashboardPage";
+import SentimentInsightsPage from "@/pages/Freelancer/SentimentInsightsPage";
 
 const queryClient = new QueryClient();
 
@@ -30,17 +33,19 @@ const App = () => (
           <MainLayout>
             <Routes>
               <Route path="/" element={<LandingPage />} />
+              <Route path="/industry" element={<IndustryDashboardPage />} />
               <Route path="/register" element={<RegistrationPage />} />
               <Route path="/auth/login" element={<LoginPage />} />
-              <Route path="/dashboard/industry" element={<IndustryDashboardPage />} />
               <Route path="/freelancer/dashboard" element={<FreelancerDashboardPage />} />
               <Route path="/freelancer/compare" element={<ProfileComparisonPage />} />
               <Route path="/freelancer/insights" element={<InsightsPage />} />
               <Route path="/freelancer/roadmap" element={<CareerRoadmapPage />} />
-              <Route path="/freelancer/re-evaluation" element={<ReEvaluationPage />} />
               <Route path="/freelancer/comparison-history" element={<ComparisonHistoryPage />} />
               <Route path="/freelancer/comparison-history/:id" element={<ComparisonDetailPage />} />
-              <Route path="/auth/register" element={<RegistrationPage />} />
+              <Route path="/freelancer/profile" element={<ProfilePage />} />
+              <Route path="/freelancer/mentorship" element={<MentorshipRequestPage />} />
+              <Route path="/freelancer/sentiment" element={<SentimentInsightsPage />} />
+              <Route path="/pro/mentorship" element={<MentorshipDashboardPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>

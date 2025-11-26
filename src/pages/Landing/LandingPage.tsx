@@ -47,7 +47,7 @@ const LandingPage = () => {
               FairFound helps professionals compare their profiles, get AI-powered insights, and improve across industries. From freelancers to developers, get the data you need to grow.
             </p>
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-              <Link to="/register">
+              <Link to="/industry">
                 <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold shadow-md">
                   Start your journey
                 </Button>

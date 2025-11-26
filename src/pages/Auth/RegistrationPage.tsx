@@ -23,7 +23,7 @@ const RegistrationPage = () => {
       createdAt: new Date(),
     };
     setUser(mockUser);
-    navigate("/dashboard/industry");
+    navigate("/freelancer/dashboard");
   };
 
   const handleEmailSignup = (e: React.FormEvent) => {
@@ -36,7 +36,7 @@ const RegistrationPage = () => {
       createdAt: new Date(),
     };
     setUser(mockUser);
-    navigate("/dashboard/industry");
+    navigate("/freelancer/dashboard");
   };
 
   return (
@@ -82,7 +82,7 @@ const RegistrationPage = () => {
         </div>
 
         {/* This separator is hidden for now as well */}
-        <div className="my-6 flex items-center hidden">
+        <div className="my-6 hidden">
           <Separator className="flex-1" />
           <span className="mx-4 text-sm text-muted-foreground">or sign up with email</span>
           <Separator className="flex-1" />

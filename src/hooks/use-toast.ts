@@ -2,8 +2,9 @@ import * as React from "react";
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
-const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+// Made configurable via configureToasts()
+let TOAST_LIMIT = 3;
+let TOAST_REMOVE_DELAY = 8000; // default 8s
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -183,4 +184,10 @@ function useToast() {
   };
 }
 
-export { useToast, toast };
+// Allow runtime configuration of toast behavior (limit & auto-remove delay)
+function configureToasts(opts: { limit?: number; removeDelay?: number }) {
+  if (typeof opts.limit === "number" && opts.limit > 0) TOAST_LIMIT = opts.limit;
+  if (typeof opts.removeDelay === "number" && opts.removeDelay >= 0) TOAST_REMOVE_DELAY = opts.removeDelay;
+}
+
+export { useToast, toast, configureToasts };

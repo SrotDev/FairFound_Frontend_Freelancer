@@ -23,7 +23,7 @@ const LoginPage = () => {
       createdAt: new Date(),
     };
     setUser(mockUser);
-    navigate("/dashboard/industry");
+    navigate("/freelancer/dashboard");
   };
 
   const handleEmailLogin = (e: React.FormEvent) => {
@@ -36,7 +36,7 @@ const LoginPage = () => {
       createdAt: new Date(),
     };
     setUser(mockUser);
-    navigate("/dashboard/industry");
+    navigate("/freelancer/dashboard");
   };
 
   return (

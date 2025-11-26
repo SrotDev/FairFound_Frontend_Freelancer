@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, ReactNode } from "react";
-import { AppState, User, Industry, FreelancerMetrics, RoadmapMilestone } from "@/types/domain";
+import { AppState, User, Industry, FreelancerMetrics, RoadmapMilestone, SentimentReview } from "@/types/domain";
+import { analyzeSentiment } from "@/lib/sentiment";
+import { useEffect } from "react";
 
 const initialFreelancerProfile: FreelancerMetrics = {
   profileCompleteness: 72,
@@ -54,6 +56,9 @@ interface AppContextType extends AppState {
   toggleMilestone: (id: string) => void;
   calculatePseudoRanking: () => number;
   savePreviousRanking: () => void;
+  clientFeedback: SentimentReview[];
+  addClientFeedback: (text: string) => SentimentReview;
+  deleteClientFeedback: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -61,9 +66,39 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [selectedIndustry, setSelectedIndustry] = useState<Industry>(null);
-  const [freelancerProfile, setFreelancerProfile] = useState<FreelancerMetrics>(initialFreelancerProfile);
+  const [freelancerProfile, setFreelancerProfile] = useState<FreelancerMetrics>(() => {
+    try {
+      const stored = localStorage.getItem("ff_freelancer_profile");
+      return stored ? { ...initialFreelancerProfile, ...JSON.parse(stored) } : initialFreelancerProfile;
+    } catch {
+      return initialFreelancerProfile;
+    }
+  });
   const [roadmapMilestones, setRoadmapMilestones] = useState<RoadmapMilestone[]>(initialRoadmap);
   const [previousPseudoRanking, setPreviousPseudoRanking] = useState<number | null>(null);
+  const [clientFeedback, setClientFeedback] = useState<SentimentReview[]>(() => {
+    try {
+      const stored = localStorage.getItem("ff_client_feedback");
+      if (stored) {
+        const parsed = JSON.parse(stored) as Omit<SentimentReview, "createdAt"> & { createdAt: string }[];
+        return parsed.map(r => ({ ...r, createdAt: new Date(r.createdAt) }));
+      }
+    } catch {}
+    return [];
+  });
+
+  // Persistence effects
+  useEffect(() => {
+    try {
+      localStorage.setItem("ff_freelancer_profile", JSON.stringify(freelancerProfile));
+    } catch {}
+  }, [freelancerProfile]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("ff_client_feedback", JSON.stringify(clientFeedback));
+    } catch {}
+  }, [clientFeedback]);
 
   const calculatePseudoRanking = (): number => {
     const completedMilestones = roadmapMilestones.filter((m) => m.completed).length;
@@ -97,6 +132,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setPreviousPseudoRanking(calculatePseudoRanking());
   };
 
+  const addClientFeedback = (text: string): SentimentReview => {
+    const analyzed = analyzeSentiment(text);
+    const review: SentimentReview = {
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+      ...analyzed,
+    };
+    setClientFeedback((prev) => [review, ...prev]);
+    return review;
+  };
+
+  const deleteClientFeedback = (id: string) => {
+    setClientFeedback((prev) => prev.filter((r) => r.id !== id));
+  };
+
   const value: AppContextType = {
     user,
     selectedIndustry,
@@ -109,6 +159,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleMilestone,
     calculatePseudoRanking,
     savePreviousRanking,
+    clientFeedback,
+    addClientFeedback,
+    deleteClientFeedback,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
