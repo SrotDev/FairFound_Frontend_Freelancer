@@ -2,7 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/AppContext";
 import { useState } from "react";
-import { TrendingUp, Moon, Sun, UserRoundSearch } from "lucide-react";
+import { TrendingUp, Moon, Sun } from "lucide-react";
+import FairfoundLogo from "../../../public/Fairfound_Logo.svg";
 
 
 const Navbar = () => {
@@ -20,9 +21,7 @@ const Navbar = () => {
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <Link to={user ? "/freelancer/dashboard" : "/"} className="flex items-center gap-2 transition-opacity hover:opacity-80">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent/80">
-            <UserRoundSearch className="h-5 w-5 text-accent-foreground" />
-          </div>
+          <img src={FairfoundLogo} alt="FairFound Logo" className="h-9" />
           <span className="text-xl font-bold">FairFound</span>
         </Link>
 
