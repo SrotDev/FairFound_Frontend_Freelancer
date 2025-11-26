@@ -48,7 +48,7 @@ const LandingPage = () => {
             </p>
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
               <Link to="/industry">
-                <Button size="lg" className="bg-accent hover:bg-cyan-600 dark:hover:bg-accent/80 text-accent-foreground font-semibold shadow-md">
+                <Button size="lg" className="bg-accent hover:bg-cyan-600 dark:bg-cyan-600 dark:hover:bg-cyan-800 text-accent-foreground font-semibold shadow-md">
                   Start your journey
                 </Button>
               </Link>
