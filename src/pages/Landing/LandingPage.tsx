@@ -24,26 +24,26 @@ const LandingPage = () => {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-cyan-500 via-cyan-400 to-cyan-600 dark:from-gray-300 dark:via-cyan-300 dark:to-sky-900 py-24 lg:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-secondary py-24 lg:py-32">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA1IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-20"></div>
         
         <div className="container relative">
           <div className="mx-auto max-w-3xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm dark:bg-slate-200 dark:text-slate-700">
-              <BarChart3 className="h-4 w-4 dark:text-slate-700" />
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
+              <BarChart3 className="h-4 w-4" />
               Data-driven career growth
             </div>
-            <h1 className="mb-6 text-4xl font-bold text-white lg:text-6xl dark:text-slate-800">
+            <h1 className="mb-6 text-4xl font-bold text-white lg:text-6xl">
               See where you stand.
               <br />
-              <span className="text-cyan-600 dark:text-cyan-700">Grow where it counts.</span>
+              <span className="text-accent">Grow where it counts.</span>
             </h1>
-            <p className="mb-8 text-lg text-white/90 lg:text-xl dark:text-gray-100">
-              FairFound helps freelancers and professionals compare their profiles, get AI-powered insights, and improve across industries. Get the data you need to grow today.
+            <p className="mb-8 text-lg text-white/90 lg:text-xl">
+              FairFound helps professionals compare their profiles, get AI-powered insights, and improve across industries. From freelancers to developers, get the data you need to grow.
             </p>
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
               <Link to="/register">
-                <Button size="lg" className="bg-cyan-600 hover:bg-cyan-700 text-accent-foreground font-semibold">
+                <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold">
                   Start your journey
                 </Button>
               </Link>
@@ -176,7 +176,7 @@ const LandingPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 lg:py-28 bg-gradient-to-br from-cyan-200 to-blue-700">
+      <section className="py-20 lg:py-28 bg-gradient-to-br from-primary to-secondary">
         <div className="container">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="mb-4 text-3xl font-bold text-white lg:text-4xl">
@@ -186,7 +186,7 @@ const LandingPage = () => {
               Join professionals who are using data to drive their career growth
             </p>
             <Link to="/register">
-              <Button size="lg" className="bg-sky-700 hover:bg-sky-800 text-accent-foreground font-semibold dark:bg-cyan-700 dark:hover:bg-cyan-800">
+              <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold">
                 Start for free
               </Button>
             </Link>
