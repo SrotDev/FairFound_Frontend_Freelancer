@@ -1,27 +1,14 @@
 # FairFound Backend API Specification & Django Architecture Guide
 
-Version: v1 (Initial Draft)
-Target Stack: Python 3.12, Django 5.x, Django REST Framework (DRF), PostgreSQL
-Auth: JWT (access + refresh) via `djangorestframework-simplejwt`
-Base URL: `https://api.fairfound.example.com/api/v1/` (local: `http://localhost:8000/api/v1/`)
-
 ---
 ## 1. Domain Overview
-FairFound enables freelancers to (1) track & improve profile metrics, (2) run comparisons, (3) manage a personalized improvement roadmap, (4) analyze client sentiment feedback, and (5) request/handle human mentorship. Industries onboarding tailors context.
-
+ - `PATCH /users/me/industry/` (set selected industry enum)
 Core Entities:
 - User (accounts)
-- FreelancerProfile (metrics) — 1:1 with User
-- RoadmapMilestone (task list per User)
-- RankingSnapshot (history of pseudo ranking per User)
-- ComparisonEntry (saved comparison snapshots)
+ - `DELETE /freelancers/me/comparisons/` (bulk clear all for user)
 - SentimentReview (analyzed client feedback items)
 - MentorshipRequest + MentorshipMessage (conversation thread)
-- Industry (+ optional IndustryFeature list)
-
-Supporting/Derived:
-- PseudoRanking calculation (service function)
-- Sentiment aggregation (query + annotate)
+ - `DELETE /freelancers/me/feedback/` (bulk clear all for user)
 
 ---
 ## 2. Django App Structure
@@ -35,6 +22,13 @@ fairfound/
   fairfound/wsgi.py
 
   apps/
+
+### 9.1.1 Selected Industry Update Request
+```
+{
+  "industry": "Freelancer"  // Enum: Freelancer | E-commerce | Developer | Business
+}
+```
     accounts/          # Custom User, registration, profile endpoints
     freelancers/       # FreelancerProfile, ranking, roadmap
     comparisons/       # ComparisonEntry logic

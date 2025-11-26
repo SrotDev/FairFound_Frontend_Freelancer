@@ -57,6 +57,15 @@ Content-Type: application/json
   "name": "Jane Developer"
 }
 
+### Set Selected Industry for Current User
+PATCH {{baseUrl}}/users/me/industry/
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "industry": "Freelancer"
+}
+
 ### Freelancer Profile Metrics
 GET {{baseUrl}}/freelancers/me/profile/
 Authorization: Bearer {{authToken}}
@@ -144,6 +153,10 @@ Authorization: Bearer {{authToken}}
 DELETE {{baseUrl}}/freelancers/me/comparisons/99/
 Authorization: Bearer {{authToken}}
 
+### Clear All Comparison Entries
+DELETE {{baseUrl}}/freelancers/me/comparisons/
+Authorization: Bearer {{authToken}}
+
 ### Sentiment Feedback (Client Reviews)
 GET {{baseUrl}}/freelancers/me/feedback/?page=1&page_size=50
 Authorization: Bearer {{authToken}}
@@ -159,6 +172,10 @@ Content-Type: application/json
 
 ### Delete Feedback
 DELETE {{baseUrl}}/freelancers/me/feedback/fb_123/
+Authorization: Bearer {{authToken}}
+
+### Clear All Feedback Items
+DELETE {{baseUrl}}/freelancers/me/feedback/
 Authorization: Bearer {{authToken}}
 
 ### Aggregate Sentiment Summary
