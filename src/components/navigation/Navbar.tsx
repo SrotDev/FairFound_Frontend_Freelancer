@@ -54,7 +54,7 @@ const Navbar = () => {
                 </Link>
               )}
                 <Link to="/industry">
-                  <Button>Get Started</Button>
+                  <Button className="bg-slate-800 hover:bg-slate-900 dark:text-white dark:bg-cyan-800 dark:hover:bg-cyan-900">Get Started</Button>
                 </Link>
             </>
           )}

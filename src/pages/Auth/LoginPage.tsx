@@ -101,7 +101,7 @@ const LoginPage = () => {
           <Button
             variant="link"
             className="p-0 h-auto font-normal"
-            onClick={() => navigate("/auth/register")}
+            onClick={() => navigate("/dashboard/industry")}
           >
             Sign up
           </Button>
