@@ -1,3 +1,4 @@
+import { apiFetch } from "../../lib/api";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ import { Github, Mail } from "lucide-react";
 const RegistrationPage = () => {
   const navigate = useNavigate();
   const { setUser } = useAppContext();
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -26,17 +29,34 @@ const RegistrationPage = () => {
     navigate("/freelancer/dashboard");
   };
 
-  const handleEmailSignup = (e: React.FormEvent) => {
+  const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock email signup
-    const mockUser = {
-      id: `user_${Date.now()}`,
-      name: email.split("@")[0],
-      email: email,
-      createdAt: new Date(),
-    };
-    setUser(mockUser);
-    navigate("/freelancer/dashboard");
+      try {
+      const data = await apiFetch("/api/auth/register/", {
+        method: "POST",
+        body: JSON.stringify({
+          name: email.split("@")[0],
+          email,
+          password,
+          username,
+        }),
+      });
+
+      // adjust keys to match your backend response
+      const user = {
+          id: data.id ?? email,
+          name: (data.name ?? name) || email.split("@")[0],
+          email,
+          createdAt: new Date(),
+        };
+
+        localStorage.setItem("user", JSON.stringify(user));
+        setUser(user);
+        navigate("/freelancer/dashboard");
+    } catch (err) {
+      console.error(err);
+      // show a toast or inline error in real app
+    }
   };
 
   return (
@@ -89,6 +109,28 @@ const RegistrationPage = () => {
         </div>
 
         <form onSubmit={handleEmailSignup} className="space-y-4">
+          <div>
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              type="text"
+              placeholder="Your name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="username">User Name</Label>
+            <Input
+              id="username"
+              type="text"
+              placeholder="Your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
           <div>
             <Label htmlFor="email">Email</Label>
             <Input
