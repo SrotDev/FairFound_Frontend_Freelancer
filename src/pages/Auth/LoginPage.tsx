@@ -52,7 +52,7 @@ const LoginPage = () => {
         <div className="space-y-4">
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full dark:hover:bg-cyan-600"
             onClick={() => handleSocialLogin("Google")}
           >
             <Mail className="mr-2 h-4 w-4" />
@@ -91,7 +91,7 @@ const LoginPage = () => {
             />
           </div>
 
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full dark:text-slate-950">
             Log in
           </Button>
         </form>
@@ -101,7 +101,7 @@ const LoginPage = () => {
           <Button
             variant="link"
             className="p-0 h-auto font-normal"
-            onClick={() => navigate("/auth/register")}
+            onClick={() => navigate("/dashboard/industry")}
           >
             Sign up
           </Button>

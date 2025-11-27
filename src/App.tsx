@@ -13,13 +13,13 @@ import FreelancerDashboardPage from "@/pages/Freelancer/FreelancerDashboardPage"
 import ProfileComparisonPage from "@/pages/Freelancer/ProfileComparisonPage";
 import InsightsPage from "@/pages/Freelancer/InsightsPage";
 import CareerRoadmapPage from "@/pages/Freelancer/CareerRoadmapPage";
-import NotFound from "./pages/NotFound";
-import ComparisonHistoryPage from "@/pages/Freelancer/ComparisonHistoryPage";
-import ComparisonDetailPage from "@/pages/Freelancer/ComparisonDetailPage";
+import ReEvaluationPage from "@/pages/Freelancer/ReEvaluationPage";
+import SentimentInsightsPage from "@/pages/Freelancer/SentimentInsightsPage";
 import ProfilePage from "@/pages/Freelancer/ProfilePage";
 import MentorshipRequestPage from "@/pages/Freelancer/MentorshipRequestPage";
-import MentorshipDashboardPage from "@/pages/Professional/MentorshipDashboardPage";
-import SentimentInsightsPage from "@/pages/Freelancer/SentimentInsightsPage";
+import ComparisonHistoryPage from "@/pages/Freelancer/ComparisonHistoryPage";
+import ComparisonDetailPage from "@/pages/Freelancer/ComparisonDetailPage";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -36,16 +36,18 @@ const App = () => (
               <Route path="/industry" element={<IndustryDashboardPage />} />
               <Route path="/freelancer/register" element={<RegistrationPage />} />
               <Route path="/auth/login" element={<LoginPage />} />
+              <Route path="/dashboard/industry" element={<IndustryDashboardPage />} />
               <Route path="/freelancer/dashboard" element={<FreelancerDashboardPage />} />
               <Route path="/freelancer/compare" element={<ProfileComparisonPage />} />
               <Route path="/freelancer/insights" element={<InsightsPage />} />
               <Route path="/freelancer/roadmap" element={<CareerRoadmapPage />} />
-              <Route path="/freelancer/comparison-history" element={<ComparisonHistoryPage />} />
-              <Route path="/freelancer/comparison-history/:id" element={<ComparisonDetailPage />} />
+              <Route path="/freelancer/re-evaluation" element={<ReEvaluationPage />} />
+              <Route path="/auth/register" element={<RegistrationPage />} />
+              <Route path="/freelancer/sentiment" element={<SentimentInsightsPage />} />
               <Route path="/freelancer/profile" element={<ProfilePage />} />
               <Route path="/freelancer/mentorship" element={<MentorshipRequestPage />} />
-              <Route path="/freelancer/sentiment" element={<SentimentInsightsPage />} />
-              <Route path="/pro/mentorship" element={<MentorshipDashboardPage />} />
+              <Route path="/freelancer/comparisonhistory" element={<ComparisonHistoryPage />} />
+              <Route path="/freelancer/comparedetail" element={<ComparisonDetailPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>
