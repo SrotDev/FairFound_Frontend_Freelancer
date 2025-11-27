@@ -38,15 +38,15 @@ const App = () => (
               <Route path="/freelancer/register" element={<AuthRoute><RegistrationPage /></AuthRoute>} />
               <Route path="/auth/login" element={<AuthRoute><LoginPage /></AuthRoute>} />
               <Route path="/freelancer/dashboard" element={<ProtectedRoute><FreelancerDashboardPage /></ProtectedRoute>} />
-              <Route path="/freelancer/compare" element={<ProfileComparisonPage />} />
-              <Route path="/freelancer/insights" element={<InsightsPage />} />
-              <Route path="/freelancer/roadmap" element={<CareerRoadmapPage />} />
-              <Route path="/freelancer/comparison-history" element={<ComparisonHistoryPage />} />
-              <Route path="/freelancer/comparison-history/:id" element={<ComparisonDetailPage />} />
-              <Route path="/freelancer/profile" element={<ProfilePage />} />
-              <Route path="/freelancer/mentorship" element={<MentorshipRequestPage />} />
-              <Route path="/freelancer/sentiment" element={<SentimentInsightsPage />} />
-              <Route path="/pro/mentorship" element={<MentorshipDashboardPage />} />
+              <Route path="/freelancer/compare" element={<ProtectedRoute><ProfileComparisonPage /></ProtectedRoute>} />
+              <Route path="/freelancer/insights" element={<ProtectedRoute><InsightsPage /></ProtectedRoute>} />
+              <Route path="/freelancer/roadmap" element={<ProtectedRoute><CareerRoadmapPage /></ProtectedRoute>} />
+              <Route path="/freelancer/comparison-history" element={<ProtectedRoute><ComparisonHistoryPage /></ProtectedRoute>} />
+              <Route path="/freelancer/comparison-history/:id" element={<ProtectedRoute><ComparisonDetailPage /></ProtectedRoute>} />
+              <Route path="/freelancer/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+              <Route path="/freelancer/mentorship" element={<ProtectedRoute><MentorshipRequestPage /></ProtectedRoute>} />
+              <Route path="/freelancer/sentiment" element={<ProtectedRoute><SentimentInsightsPage /></ProtectedRoute>} />
+              <Route path="/pro/mentorship" element={<ProtectedRoute><MentorshipDashboardPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>

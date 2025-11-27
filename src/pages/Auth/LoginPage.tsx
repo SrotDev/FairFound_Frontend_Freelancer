@@ -51,6 +51,8 @@ const LoginPage = () => {
     };
 
     setUser(user);
+    // Persist user for refresh durability
+    try { localStorage.setItem("user", JSON.stringify(user)); } catch {}
     navigate("/freelancer/dashboard");
   } catch (err) {
     console.error("Login error", err);

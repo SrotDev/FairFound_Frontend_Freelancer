@@ -106,6 +106,40 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     } catch {}
   }, [clientFeedback]);
 
+  // Persist user when it changes (login / registration / logout)
+  useEffect(() => {
+    try {
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+      } else {
+        localStorage.removeItem("user");
+      }
+    } catch {}
+  }, [user]);
+
+  // Hydrate user from token if missing after hard refresh
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+    if (!user && token) {
+      (async () => {
+        try {
+          const res = await fetch("http://localhost:8000/api/users/me/info/", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setUser({
+              id: data.id || data.uuid || data.pk || data.email || "user",
+              name: data.name || data.username || (data.email ? data.email.split("@")[0] : "User"),
+              email: data.email || "",
+              createdAt: new Date(),
+            });
+          }
+        } catch {}
+      })();
+    }
+  }, [user]);
+
   const calculatePseudoRanking = (): number => {
     const completedMilestones = roadmapMilestones.filter((m) => m.completed).length;
     const milestoneBonus = (completedMilestones / roadmapMilestones.length) * 15;
