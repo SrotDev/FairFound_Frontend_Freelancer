@@ -59,12 +59,17 @@ interface AppContextType extends AppState {
   clientFeedback: SentimentReview[];
   addClientFeedback: (text: string) => SentimentReview;
   deleteClientFeedback: (id: string) => void;
+  logout: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window === "undefined") return null;
+    const stored = localStorage.getItem("user");
+    return stored ? JSON.parse(stored) : null;
+  });
   const [selectedIndustry, setSelectedIndustry] = useState<Industry>(null);
   const [freelancerProfile, setFreelancerProfile] = useState<FreelancerMetrics>(() => {
     try {
@@ -80,12 +85,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       const stored = localStorage.getItem("ff_client_feedback");
       if (stored) {
-        const parsed = JSON.parse(stored) as Omit<SentimentReview, "createdAt"> & { createdAt: string }[];
+        const parsed = JSON.parse(stored) as (Omit<SentimentReview, "createdAt"> & { createdAt: string })[];
         return parsed.map(r => ({ ...r, createdAt: new Date(r.createdAt) }));
       }
     } catch {}
     return [];
   });
+  
 
   // Persistence effects
   useEffect(() => {
@@ -142,7 +148,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setClientFeedback((prev) => [review, ...prev]);
     return review;
   };
-
+  const logout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    setUser(null);
+  };
   const deleteClientFeedback = (id: string) => {
     setClientFeedback((prev) => prev.filter((r) => r.id !== id));
   };
@@ -162,6 +173,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     clientFeedback,
     addClientFeedback,
     deleteClientFeedback,
+    logout,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

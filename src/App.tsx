@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
+import { AuthRoute, ProtectedRoute } from "@/routes/AuthGuards";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -34,9 +35,9 @@ const App = () => (
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/industry" element={<IndustryDashboardPage />} />
-              <Route path="/freelancer/register" element={<RegistrationPage />} />
-              <Route path="/auth/login" element={<LoginPage />} />
-              <Route path="/freelancer/dashboard" element={<FreelancerDashboardPage />} />
+              <Route path="/freelancer/register" element={<AuthRoute><RegistrationPage /></AuthRoute>} />
+              <Route path="/auth/login" element={<AuthRoute><LoginPage /></AuthRoute>} />
+              <Route path="/freelancer/dashboard" element={<ProtectedRoute><FreelancerDashboardPage /></ProtectedRoute>} />
               <Route path="/freelancer/compare" element={<ProfileComparisonPage />} />
               <Route path="/freelancer/insights" element={<InsightsPage />} />
               <Route path="/freelancer/roadmap" element={<CareerRoadmapPage />} />

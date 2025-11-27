@@ -17,7 +17,7 @@ const ProfilePage = () => {
   const [portfolioItems, setPortfolioItems] = React.useState<number>(freelancerProfile.portfolioItems);
   const [proposalSuccessRate, setProposalSuccessRate] = React.useState<number>(freelancerProfile.proposalSuccessRate);
   const [repeatClientsRate, setRepeatClientsRate] = React.useState<number>(freelancerProfile.repeatClientsRate);
-
+  const { logout } = useAppContext();
   const navigate = useNavigate();
   const pseudoRanking = calculatePseudoRanking();
 
@@ -69,7 +69,7 @@ const ProfilePage = () => {
           </Button>
           <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
             <Button variant="destructive" onClick={() => setConfirmOpen(true)} className="gap-2">
-              <LogOut className="h-4 w-4" /> Logout
+              <LogOut onClick={logout} className="h-4 w-4" /> Logout
             </Button>
             <DialogContent>
               <DialogHeader>
