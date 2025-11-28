@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
@@ -7,11 +8,53 @@ import { useAppContext } from "@/context/AppContext";
 import { Eye, TrendingUp, Target, Mail, ArrowRight, ClipboardList } from "lucide-react";
 import { Users } from "lucide-react";
 import { MessageSquareQuote } from "lucide-react";
+import { getProfile } from "@/lib/endpoints/freelancer";
+import { getMyRanking } from "@/lib/endpoints/ranking";
 
 const FreelancerDashboardPage = () => {
   const navigate = useNavigate();
   const { user, freelancerProfile, calculatePseudoRanking } = useAppContext();
-  const pseudoRanking = calculatePseudoRanking();
+  const [apiProfile, setApiProfile] = useState<any | null>(null);
+  const [apiRanking, setApiRanking] = useState<any | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [p] = await Promise.all([getProfile()]);
+        setApiProfile(p);
+        
+      } catch (e) {
+        // Fail silently; UI will fallback to local context
+      }
+    })();
+  }, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const [ r] = await Promise.all([ getMyRanking()]);
+        
+        setApiRanking(r);
+      } catch (e) {
+        // Fail silently; UI will fallback to local context
+      }
+    })();
+  }, []);
+
+  // Prefer backend ranking if present, else fallback to local calculation
+  const backendScore = apiRanking?.score ?? apiRanking?.pseudo_ranking ?? apiRanking?.ranking ?? null;
+  const pseudoRanking = typeof backendScore === "number" ? backendScore : calculatePseudoRanking();
+
+  // Merge profile fields: prefer API profile, fallback to context defaults
+  const profile = {
+    profileCompleteness: apiProfile?.profile_completeness ?? freelancerProfile.profileCompleteness,
+    profileViews: apiProfile?.profile_views ?? freelancerProfile.profileViews,
+    proposalSuccessRate: apiProfile?.proposal_success_rate ?? freelancerProfile.proposalSuccessRate,
+    jobInvitations: apiProfile?.job_invitations ?? freelancerProfile.jobInvitations,
+    hourlyRate: apiProfile?.hourly_rate ?? freelancerProfile.hourlyRate,
+    skills: Array.isArray(apiProfile?.skills) ? apiProfile.skills : freelancerProfile.skills,
+    portfolioItems: apiProfile?.portfolio_items ?? freelancerProfile.portfolioItems,
+    repeatClientsRate: apiProfile?.repeat_clients_rate ?? freelancerProfile.repeatClientsRate,
+  };
 
   return (
     <div className="container py-12">
@@ -86,28 +129,28 @@ const FreelancerDashboardPage = () => {
           <div className="grid gap-6 sm:grid-cols-2">
             <StatCard
               title="Profile Completeness"
-              value={`${freelancerProfile.profileCompleteness}%`}
+              value={`${profile.profileCompleteness}%`}
               icon={Target}
               trend="+5% vs last month"
               trendUp={true}
             />
             <StatCard
               title="Profile Views"
-              value={freelancerProfile.profileViews}
+              value={profile.profileViews}
               icon={Eye}
               trend="+12 this week"
               trendUp={true}
             />
             <StatCard
               title="Proposal Success Rate"
-              value={`${freelancerProfile.proposalSuccessRate}%`}
+              value={`${profile.proposalSuccessRate}%`}
               icon={TrendingUp}
               trend="-2% vs last month"
               trendUp={false}
             />
             <StatCard
               title="Job Invitations"
-              value={freelancerProfile.jobInvitations}
+              value={profile.jobInvitations}
               icon={Mail}
               trend="This month"
               trendUp={true}
@@ -149,7 +192,7 @@ const FreelancerDashboardPage = () => {
           <Card className="p-6">
             <h3 className="mb-4 text-lg font-semibold">Your Skills</h3>
             <div className="flex flex-wrap gap-2">
-              {freelancerProfile.skills.map((skill) => (
+              {profile.skills.map((skill: string) => (
                 <span
                   key={skill}
                   className="rounded-full bg-accent/10 px-3 py-1 text-sm font-medium text-accent"
@@ -165,15 +208,15 @@ const FreelancerDashboardPage = () => {
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Hourly Rate</span>
-                <span className="font-semibold">${freelancerProfile.hourlyRate}/hr</span>
+                <span className="font-semibold">${profile.hourlyRate}/hr</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Portfolio Items</span>
-                <span className="font-semibold">{freelancerProfile.portfolioItems}</span>
+                <span className="font-semibold">{profile.portfolioItems}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Repeat Clients</span>
-                <span className="font-semibold">{freelancerProfile.repeatClientsRate}%</span>
+                <span className="font-semibold">{profile.repeatClientsRate}%</span>
               </div>
             </div>
           </Card>
