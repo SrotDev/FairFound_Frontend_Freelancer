@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { FreelancerMetrics } from "@/types/domain";
+import { getComparisons, deleteComparison, deleteAllComparisons, createComparison } from "@/lib/endpoints/comparison";
 
 export interface ComparisonHistoryEntry {
   id: string;
@@ -10,149 +11,126 @@ export interface ComparisonHistoryEntry {
   userScore?: number;
   competitorUrl?: string;
 }
-
-const STORAGE_KEY = "ff_comparison_history";
-const SEED_FLAG = "ff_comparison_history_seeded_v1";
+// Derive default role from any persisted profile or fallback value
+function getDefaultRole() {
+  try {
+    const raw = localStorage.getItem("freelancerProfile");
+    if (raw) {
+      const profile = JSON.parse(raw);
+      if (profile?.role) return String(profile.role);
+    }
+  } catch {}
+  return "web-developer";
+}
 
 export const useComparisonHistory = () => {
   const [entries, setEntries] = useState<ComparisonHistoryEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const role = useMemo(() => getDefaultRole(), []);
 
-  const getSeedData = (): ComparisonHistoryEntry[] => [
-    {
-      id: "seed-1",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
-      role: "web-developer",
-      competitorUrl: "https://example.com/freelancer/jane-doe",
-      userScore: 66,
-      userMetrics: {
-        profileCompleteness: 72,
-        profileViews: 120,
-        proposalSuccessRate: 18,
-        jobInvitations: 4,
-        hourlyRate: 55,
-        skills: ["React", "TypeScript", "Tailwind"],
-        portfolioItems: 8,
-        repeatClientsRate: 25,
-      },
-      topFreelancersAverage: {
-        profileCompleteness: 92,
-        proposalSuccessRate: 35,
-        portfolioItems: 15,
-        hourlyRate: 75,
-        repeatClientsRate: 45,
-      },
-    },
-    {
-      id: "seed-2",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-      role: "graphic-designer",
-      userScore: 58,
-      userMetrics: {
-        profileCompleteness: 65,
-        profileViews: 90,
-        proposalSuccessRate: 16,
-        jobInvitations: 3,
-        hourlyRate: 40,
-        skills: ["Figma", "Illustrator", "Branding"],
-        portfolioItems: 6,
-        repeatClientsRate: 22,
-      },
-      topFreelancersAverage: {
-        profileCompleteness: 90,
-        proposalSuccessRate: 32,
-        portfolioItems: 14,
-        hourlyRate: 60,
-        repeatClientsRate: 40,
-      },
-    },
-    {
-      id: "seed-3",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-      role: "marketing",
-      competitorUrl: "https://example.com/freelancer/john-smith",
-      userScore: 71,
-      userMetrics: {
-        profileCompleteness: 78,
-        profileViews: 140,
-        proposalSuccessRate: 22,
-        jobInvitations: 5,
-        hourlyRate: 50,
-        skills: ["SEO", "Content", "GA4"],
-        portfolioItems: 10,
-        repeatClientsRate: 28,
-      },
-      topFreelancersAverage: {
-        profileCompleteness: 91,
-        proposalSuccessRate: 34,
-        portfolioItems: 16,
-        hourlyRate: 70,
-        repeatClientsRate: 44,
-      },
-    },
-  ];
-
-  const seedDemo = () => {
-    const seed = getSeedData();
-    setEntries(seed);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-      localStorage.setItem(SEED_FLAG, "1");
-    } catch {
-      // ignore
-    }
+  const normalize = (item: any): ComparisonHistoryEntry => {
+    const snapshot = item.snapshot || {};
+    const snapUserMetrics = snapshot.userMetrics || snapshot.user_metrics || {};
+    return {
+      id: item.id || item.uuid,
+      createdAt: item.created_at || item.createdAt || new Date().toISOString(),
+      role: item.competitor_role || item.role || role,
+      userScore: item.pseudo_ranking ?? item.user_score ?? item.userScore,
+      competitorUrl: item.competitor_identifier || item.competitor_url || item.competitorUrl,
+      userMetrics: (snapUserMetrics as FreelancerMetrics) || (item.user_metrics as FreelancerMetrics) || (item.userMetrics as FreelancerMetrics) || ({} as FreelancerMetrics),
+      topFreelancersAverage: snapshot.topFreelancersAverage || snapshot.top_freelancers_average,
+    };
   };
 
-  useEffect(() => {
+  const load = useCallback(async () => {
+    setLoading(true);
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setEntries(parsed);
-        } else {
-          if (!localStorage.getItem(SEED_FLAG)) {
-            seedDemo();
-          } else {
-            setEntries([]);
-          }
-        }
-      } else {
-        if (!localStorage.getItem(SEED_FLAG)) {
-          seedDemo();
-        }
-      }
-    } catch {
-      // ignore
+      const data = await getComparisons(role);
+      const list = Array.isArray(data) ? data.map(normalize) : [];
+      setEntries(list);
+    } catch (e) {
+      console.error("Failed to fetch comparisons", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [role]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const clearAll = useCallback(async () => {
+    try {
+      await deleteAllComparisons();
+      setEntries([]);
+    } catch (e) {
+      console.error("Failed to clear comparisons", e);
     }
   }, []);
 
-  useEffect(() => {
+  const remove = useCallback(async (id: string) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-    } catch {
-      // ignore
+      await deleteComparison(id);
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+    } catch (e) {
+      console.error("Failed to delete comparison", e);
     }
-  }, [entries]);
+  }, []);
 
-  const addEntry = (partial: Omit<ComparisonHistoryEntry, "id" | "createdAt">) => {
-    const entry: ComparisonHistoryEntry = {
-      id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
-      createdAt: new Date().toISOString(),
-      ...partial,
-    };
-    setEntries((prev) => [entry, ...prev]);
-    return entry;
-  };
-
-  const clearAll = () => setEntries([]);
-  const remove = (id: string) => setEntries((prev) => prev.filter((e) => e.id !== id));
+  const seedDemo = useCallback(async () => {
+    const demoItems = [
+      {
+        competitor_identifier: "https://example.com/freelancer/jane-doe",
+        competitor_role: role,
+        pseudo_ranking: 66,
+        snapshot: {
+          userMetrics: {
+            profileCompleteness: 72,
+            profileViews: 120,
+            proposalSuccessRate: 18,
+            jobInvitations: 4,
+            hourlyRate: 55,
+            skills: ["React", "TypeScript", "Tailwind"],
+            portfolioItems: 8,
+            repeatClientsRate: 25,
+          },
+        },
+      },
+      {
+        competitor_identifier: "https://example.com/freelancer/mary-roe",
+        competitor_role: role,
+        pseudo_ranking: 58,
+        snapshot: {
+          userMetrics: {
+            profileCompleteness: 65,
+            profileViews: 90,
+            proposalSuccessRate: 16,
+            jobInvitations: 3,
+            hourlyRate: 40,
+            skills: ["Figma", "Illustrator", "Branding"],
+            portfolioItems: 6,
+            repeatClientsRate: 22,
+          },
+        },
+      },
+    ];
+    try {
+      for (const item of demoItems) {
+        await createComparison(item);
+      }
+      await load();
+    } catch (e) {
+      console.error("Failed to seed demo", e);
+    }
+  }, [role, load]);
 
   const groupedByRole = useMemo(() => {
     return entries.reduce<Record<string, ComparisonHistoryEntry[]>>((acc, e) => {
-      (acc[e.role] = acc[e.role] || []).push(e);
+      const key = (e.role || role).toLowerCase();
+      (acc[key] = acc[key] || []).push(e);
       return acc;
     }, {});
-  }, [entries]);
+  }, [entries, role]);
 
-  return { entries, addEntry, clearAll, remove, groupedByRole, seedDemo };
+  return { entries, clearAll, remove, groupedByRole, seedDemo, loading, reload: load };
 };

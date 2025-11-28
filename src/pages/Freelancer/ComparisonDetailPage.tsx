@@ -11,7 +11,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 const ComparisonDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { entries, addEntry } = useComparisonHistory();
+  const { entries, addEntry } = useComparisonHistory() as any;
   const { freelancerProfile } = useAppContext();
 
   const entry = entries.find((e) => e.id === id);

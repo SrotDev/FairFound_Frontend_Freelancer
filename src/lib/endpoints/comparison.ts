@@ -15,6 +15,6 @@ export const deleteComparison = (uuid: string) =>
   });
 
 export const deleteAllComparisons = () =>
-  apiFetch("/api/comparisons/me/comparisons/", {
+  apiFetch("/api/comparisons/me/comparisons/bulk-delete/", {
     method: "DELETE",
   });

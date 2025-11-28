@@ -11,11 +11,13 @@ import { ArrowRight, TrendingUp, TrendingDown } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { useComparisonHistory } from "@/hooks/use-comparison-history";
+import { createComparison } from "@/lib/endpoints/comparison";
+import { toast } from "@/components/ui/use-toast";
 
 const ProfileComparisonPage = () => {
   const navigate = useNavigate();
   const { freelancerProfile } = useAppContext();
-    const { addEntry } = useComparisonHistory();
+    useComparisonHistory();
   const [competitorUrl, setCompetitorUrl] = useState("");
   const [selectedRole, setSelectedRole] = useState("web-developer");
   const [selectedCompetitor, setSelectedCompetitor] = useState<string | null>(null);
@@ -147,16 +149,37 @@ const ProfileComparisonPage = () => {
 
             <Button
               className="w-full"
-              onClick={() => {
+              onClick={async () => {
                 const chosenUrl = selectedCompetitor ?? (competitorUrl || undefined);
-                addEntry({
-                  role: selectedRole,
-                  userMetrics: freelancerProfile,
-                  topFreelancersAverage,
-                  userScore,
-                  competitorUrl: chosenUrl || undefined,
-                });
                 setComparisonStarted(true);
+                try {
+                  await createComparison({
+                    competitor_identifier: chosenUrl || `suggested:${selectedRole}`,
+                    competitor_role: selectedRole,
+                    pseudo_ranking: userScore,
+                    snapshot: {
+                      userMetrics: {
+                        profileCompleteness: freelancerProfile.profileCompleteness,
+                        proposalSuccessRate: freelancerProfile.proposalSuccessRate,
+                        portfolioItems: freelancerProfile.portfolioItems,
+                        hourlyRate: freelancerProfile.hourlyRate,
+                        repeatClientsRate: freelancerProfile.repeatClientsRate,
+                        skills: (freelancerProfile as any).skills || [],
+                      },
+                    },
+                  });
+                  toast({
+                    title: "Comparison saved",
+                    description: "Added to your comparison history.",
+                  });
+                } catch (e) {
+                  console.error("Failed to save comparison entry", e);
+                  toast({
+                    title: "Failed to save comparison",
+                    description: "Please try again.",
+                    variant: "destructive",
+                  });
+                }
               }}
             >
               Start Comparison
