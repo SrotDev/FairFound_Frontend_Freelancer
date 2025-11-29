@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/AppContext";
 import { useState } from "react";
@@ -7,7 +7,8 @@ import { TrendingUp, Moon, Sun, UserRoundSearch } from "lucide-react";
 
 const Navbar = () => {
   const location = useLocation();
-  const { user } = useAppContext();
+  const { user, logout } = useAppContext();
+  const navigate = useNavigate();
   const isHome = location.pathname === "/";
   const [darkMode, setDarkMode] = useState(false);
 
@@ -46,6 +47,12 @@ const Navbar = () => {
                 </div>
                 <span className="sr-only">Profile</span>
               </Link>
+              <Button
+                variant="outline"
+                onClick={() => { logout(); navigate("/auth/login"); }}
+              >
+                Logout
+              </Button>
             </>
           ) : (
             <>

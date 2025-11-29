@@ -186,6 +186,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("user");
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+    // Clear feature-specific cached data to avoid UX confusion after logout
+    localStorage.removeItem("ff_comparison_history");
+    localStorage.removeItem("ff_mentorship_requests");
+    localStorage.removeItem("ff_freelancer_profile");
+    localStorage.removeItem("ff_client_feedback");
     setUser(null);
   };
   const deleteClientFeedback = (id: string) => {

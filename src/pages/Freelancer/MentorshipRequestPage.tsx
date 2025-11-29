@@ -6,55 +6,87 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAppContext } from "@/context/AppContext";
 import { Upload, Send, Paperclip } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import {
+  getMyMentorshipRequests,
+  createMentorshipRequest,
+  getMentorshipRequest,
+  updateMentorshipRequest,
+  sendMessage as sendMessageApi,
+  getRequestMessages,
+} from "@/lib/endpoints/mentorship";
 
 // Lightweight mock: requests stored in localStorage to demo flow
 type RequestStatus = "pending" | "accepted" | "declined";
 type MentorshipRequest = {
-  id: string;
-  name: string;
+  id: string; // UUID
+  name?: string;
   topic: string;
   details: string;
   files: string[];
   status: RequestStatus;
-  messages: Array<{ from: "mentee" | "pro"; text: string; ts: number }>;
+  messages?: Array<{ from: "mentee" | "pro"; text: string; ts?: number }>;
 };
 
 function useMentorshipRequests() {
-  const [requests, setRequests] = useState<MentorshipRequest[]>(
-    () => {
-      try {
-        const raw = localStorage.getItem("ff_mentorship_requests");
-        return raw ? JSON.parse(raw) : [];
-      } catch {
-        return [];
-      }
+  const [requests, setRequests] = useState<MentorshipRequest[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await getMyMentorshipRequests();
+      const normalized: MentorshipRequest[] = Array.isArray(data)
+        ? data.map((r: any) => ({
+            id: r.id || r.uuid || r.pk || String(r.id),
+            name: r.name,
+            topic: r.topic,
+            details: r.details,
+            files: r.files || [],
+            status: (r.status || "pending") as RequestStatus,
+            messages: r.messages || [],
+          }))
+        : [];
+      setRequests(normalized);
+    } catch (e) {
+      console.error("Failed to load mentorship requests", e);
+    } finally {
+      setLoading(false);
     }
-  );
-
-  const save = (next: MentorshipRequest[]) => {
-    setRequests(next);
-    localStorage.setItem("ff_mentorship_requests", JSON.stringify(next));
   };
 
-  const addRequest = (req: { name: string; topic: string; details: string; files: string[] }) => {
-    const entry: MentorshipRequest = { id: Date.now().toString(), ...req, status: "pending", messages: [] };
-    const next = [entry, ...requests];
-    save(next);
+  const addRequest = async (req: { name?: string; topic: string; details: string; files: string[] }) => {
+    try {
+      const created = await createMentorshipRequest(req);
+      toast({ title: "Request submitted", description: "Your mentorship request is pending." });
+      await load();
+      return created;
+    } catch (e) {
+      console.error("Failed to submit request", e);
+      toast({ title: "Submission failed", description: "Please try again.", variant: "destructive" });
+    }
   };
 
-  const appendMessage = (id: string, msg: { from: "mentee" | "pro"; text: string }) => {
-    const next = requests.map((r) => (r.id === id ? { ...r, messages: [...r.messages, { ...msg, ts: Date.now() }] } : r));
-    save(next);
+  const appendMessage = async (id: string, msg: { from: "mentee" | "pro"; text: string }) => {
+    try {
+      await sendMessageApi(id, msg.text);
+      await load();
+    } catch (e) {
+      console.error("Failed to send message", e);
+      toast({ title: "Message failed", description: "Please try again.", variant: "destructive" });
+    }
   };
 
-  return { requests, addRequest, appendMessage };
+  useEffect(() => {
+    load();
+  }, []);
 
-  return { requests, addRequest };
+  return { requests, addRequest, appendMessage, loading, reload: load };
 }
 
 const MentorshipRequestPage = () => {
   const { user } = useAppContext();
-  const { requests, addRequest, appendMessage } = useMentorshipRequests();
+  const { requests, addRequest, appendMessage, loading } = useMentorshipRequests();
   const [topic, setTopic] = useState("");
   const [details, setDetails] = useState("");
   const [files, setFiles] = useState<string[]>([]);
@@ -62,16 +94,26 @@ const MentorshipRequestPage = () => {
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [chat, setChat] = useState<Array<{ from: "you" | "pro"; text: string }>>([]);
 
-  // Load chat history when selecting a request
+  // Load chat history from backend when selecting a request
   useEffect(() => {
-    if (!activeRequestId) return;
-    const r = requests.find((x) => x.id === activeRequestId);
-    if (r) {
-      setChat(
-        r.messages.map((m) => ({ from: m.from === "mentee" ? "you" : "pro", text: m.text }))
-      );
-    }
-  }, [activeRequestId, requests]);
+    const loadMessages = async () => {
+      if (!activeRequestId) return;
+      try {
+        const msgs = await getRequestMessages(activeRequestId);
+        const normalized = Array.isArray(msgs)
+          ? msgs.map((m: any) => ({
+              from: m.sender && (m.sender.id || m.sender.email) ? "pro" : "pro", // fallback
+              text: m.text,
+            }))
+          : [];
+        // If backend returns sender as id, map current user to "you"
+        setChat(normalized);
+      } catch (e) {
+        console.error("Failed to load messages", e);
+      }
+    };
+    loadMessages();
+  }, [activeRequestId]);
 
   // Auto-refresh requests so mentee sees status changes and new messages
   useEffect(() => {
@@ -98,9 +140,9 @@ const MentorshipRequestPage = () => {
     setFiles((prev) => [...prev, ...names]);
   };
 
-  const submitRequest = () => {
+  const submitRequest = async () => {
     if (!topic.trim() || !details.trim()) return;
-    addRequest({ name: user?.name || "Anonymous", topic, details, files });
+    await addRequest({ name: user?.name || "Anonymous", topic, details, files });
     setTopic("");
     setDetails("");
     setFiles([]);
@@ -156,7 +198,9 @@ const MentorshipRequestPage = () => {
             <div className="mb-4">
               <h4 className="mb-2 text-sm font-semibold">Your Requests</h4>
               <div className="space-y-2">
-                {requests.length === 0 ? (
+                {loading ? (
+                  <p className="text-sm text-muted-foreground">Loading requests…</p>
+                ) : requests.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No requests submitted yet.</p>
                 ) : (
                   requests.map((r) => (

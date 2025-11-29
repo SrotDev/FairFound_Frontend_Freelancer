@@ -26,3 +26,17 @@ export const sendMessage = (uuid: string, text: string) =>
 
 export const getPendingRequests = () =>
   apiFetch("/api/mentorship/dashboard/requests/?status=pending");
+
+export const getMentorRequests = (status?: string) => {
+  const base = "/api/mentorship/dashboard/requests/";
+  return apiFetch(status ? `${base}?status=${status}` : base);
+};
+
+export const acceptMentorshipRequest = (uuid: string) =>
+  apiFetch(`/api/mentorship/requests/${uuid}/accept/`, { method: "POST" });
+
+export const rejectMentorshipRequest = (uuid: string) =>
+  apiFetch(`/api/mentorship/requests/${uuid}/reject/`, { method: "POST" });
+
+export const getRequestMessages = (uuid: string) =>
+  apiFetch(`/api/mentorship/requests/${uuid}/messages/`);
