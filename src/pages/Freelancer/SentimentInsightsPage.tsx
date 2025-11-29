@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { useAppContext } from "@/context/AppContext";
+import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,24 +8,64 @@ import { aggregateReviews } from "@/lib/sentiment";
 import { exportSentimentCSV } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { Trash2, Plus, MessageSquare, TrendingUp, AlertTriangle } from "lucide-react";
+import { getFeedback, addFeedback, deleteFeedback, getAggregateFeedback, exportFeedback } from "@/lib/endpoints/sentiment";
+import type { SentimentReview } from "@/types/domain";
 
 const SentimentInsightsPage: React.FC = () => {
-  const { clientFeedback, addClientFeedback, deleteClientFeedback } = useAppContext();
+  const [reviews, setReviews] = useState<SentimentReview[]>([]);
   const [newText, setNewText] = useState("");
   const [adding, setAdding] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [aggRemote, setAggRemote] = useState<any | null>(null);
 
-  const handleAdd = () => {
-    if (!newText.trim()) return;
-    setAdding(true);
-    addClientFeedback(newText.trim());
-    setNewText("");
-    setAdding(false);
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await getFeedback();
+      // Map backend items to SentimentReview shape, assuming fields: id,text,created_at,score,label,categories,suggestions
+      const normalized: SentimentReview[] = Array.isArray(data)
+        ? data.map((r: any) => ({
+            id: r.id || r.uuid || r.pk || String(r.id),
+            text: r.text || r.content || "",
+            createdAt: r.created_at ? new Date(r.created_at) : new Date(),
+            score: typeof r.score === "number" ? r.score : 0,
+            label: r.label || "neutral",
+            categories: Array.isArray(r.categories) ? r.categories : [],
+            suggestions: Array.isArray(r.suggestions) ? r.suggestions : [],
+          }))
+        : [];
+      setReviews(normalized);
+      try {
+        const agg = await getAggregateFeedback();
+        setAggRemote(agg);
+      } catch {}
+    } catch (e) {
+      console.error("Failed to load feedback", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const agg = aggregateReviews(clientFeedback);
+  useEffect(() => { load(); }, []);
+
+  const handleAdd = async () => {
+    if (!newText.trim()) return;
+    setAdding(true);
+    try {
+      await addFeedback({ text: newText.trim() });
+      setNewText("");
+      await load();
+    } catch (e) {
+      console.error("Add feedback failed", e);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const aggLocal = aggregateReviews(reviews);
 
   // Collect aggregated actionable suggestions (dedupe) from all reviews
-  const allSuggestions = Array.from(new Set(clientFeedback.flatMap(r => r.suggestions)));
+  const allSuggestions = Array.from(new Set(reviews.flatMap(r => r.suggestions)));
 
   return (
     <div className="container py-12 max-w-6xl">
@@ -38,16 +77,26 @@ const SentimentInsightsPage: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Badge variant="secondary" className="text-sm">{clientFeedback.length} feedback entries</Badge>
+          <Badge variant="secondary" className="text-sm">{reviews.length} feedback entries</Badge>
           <Button
             variant="outline"
             size="sm"
-            disabled={clientFeedback.length === 0}
+            disabled={reviews.length === 0}
             onClick={() => {
-              exportSentimentCSV(clientFeedback);
+              exportSentimentCSV(reviews);
               toast({ title: "Exported CSV", description: "Sentiment feedback downloaded." });
             }}
           >Export CSV</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                await exportFeedback();
+                toast({ title: "Export requested", description: "Server export initiated." });
+              } catch {}
+            }}
+          >Server Export</Button>
         </div>
       </div>
 
@@ -75,15 +124,29 @@ const SentimentInsightsPage: React.FC = () => {
 
           <Card className="p-6 space-y-4">
             <h3 className="text-lg font-semibold">Analyzed Feedback</h3>
-            {clientFeedback.length === 0 && (
+            {reviews.length === 0 && (
               <p className="text-sm text-muted-foreground">No feedback yet. Add your first entry above.</p>
             )}
             <div className="space-y-4">
-              {clientFeedback.map((r) => (
+              {reviews.map((r) => (
                 <div key={r.id} className="rounded-lg border border-border/50 p-4 space-y-3 bg-muted/30">
                   <div className="flex items-start justify-between gap-4">
                     <p className="text-sm leading-relaxed whitespace-pre-line">{r.text}</p>
-                    <Button variant="ghost" size="sm" onClick={() => deleteClientFeedback(r.id)} className="text-muted-foreground hover:text-destructive">
+                    <Button variant="ghost" size="sm" onClick={async () => {
+                      // Optimistic remove for snappy UX
+                      const prev = reviews;
+                      setReviews(prev => prev.filter(x => x.id !== r.id));
+                      try {
+                        await deleteFeedback(r.id);
+                      } catch (e) {
+                        // Roll back only if DELETE failed
+                        setReviews(prev);
+                        toast({ title: "Delete failed", description: "Could not remove feedback.", variant: "destructive" });
+                        return;
+                      }
+                      // Best-effort sync; ignore errors to avoid wrong toaster
+                      try { await load(); } catch {}
+                    }} className="text-muted-foreground hover:text-destructive">
                       <Trash2 className="h-4 w-4"/>
                     </Button>
                   </div>
@@ -116,25 +179,25 @@ const SentimentInsightsPage: React.FC = () => {
             <div className="grid grid-cols-3 gap-3 text-sm">
               <div className="rounded-md border p-3 flex flex-col items-center">
                 <span className="text-[10px] tracking-wide font-semibold text-muted-foreground">POSITIVE</span>
-                <span className="mt-1 text-xl font-bold">{agg.positives}</span>
+                <span className="mt-1 text-xl font-bold">{aggLocal.positives}</span>
               </div>
               <div className="rounded-md border p-3 flex flex-col items-center">
                 <span className="text-[10px] tracking-wide font-semibold text-muted-foreground">NEUTRAL</span>
-                <span className="mt-1 text-xl font-bold">{agg.neutrals}</span>
+                <span className="mt-1 text-xl font-bold">{aggLocal.neutrals}</span>
               </div>
               <div className="rounded-md border p-3 flex flex-col items-center">
                 <span className="text-[10px] tracking-wide font-semibold text-muted-foreground">NEGATIVE</span>
-                <span className="mt-1 text-xl font-bold">{agg.negatives}</span>
+                <span className="mt-1 text-xl font-bold">{aggLocal.negatives}</span>
               </div>
             </div>
             <div className="text-xs text-muted-foreground">
-              Average sentiment score: <span className="font-semibold">{(agg.avgScore*100).toFixed(1)}</span> (−100 to 100 scale)
+              Average sentiment score: <span className="font-semibold">{(aggLocal.avgScore*100).toFixed(1)}</span> (−100 to 100 scale)
             </div>
-            {agg.topCategories.length > 0 && (
+            {aggLocal.topCategories.length > 0 && (
               <div className="text-xs">
                 <p className="font-semibold mb-1">Top recurring themes:</p>
                 <div className="flex flex-wrap gap-2">
-                  {agg.topCategories.map(c => <Badge key={c} variant="outline" className="uppercase tracking-wide">{c}</Badge>)}
+                  {aggLocal.topCategories.map(c => <Badge key={c} variant="outline" className="uppercase tracking-wide">{c}</Badge>)}
                 </div>
               </div>
             )}

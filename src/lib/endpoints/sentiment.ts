@@ -15,7 +15,7 @@ export const deleteFeedback = (uuid: string) =>
   });
 
 export const deleteAllFeedback = () =>
-  apiFetch("/api/sentiment/me/feedback/", {
+  apiFetch("/api/sentiment/me/feedback/bulk-delete/", {
     method: "DELETE",
   });
 
@@ -24,3 +24,9 @@ export const getAggregateFeedback = () =>
 
 export const exportFeedback = () =>
   apiFetch("/api/sentiment/me/feedback/export/?format=csv");
+
+export const analyzeFeedback = (data: { text: string }) =>
+  apiFetch("/api/sentiment/me/feedback/analyze/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
