@@ -93,6 +93,7 @@ const MentorshipRequestPage = () => {
   const [message, setMessage] = useState("");
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [chat, setChat] = useState<Array<{ from: "you" | "pro"; text: string }>>([]);
+  const currentUserIdStr = user?.id ? String(user.id) : (user?.email ? String(user.email) : "");
 
   // Load chat history from backend when selecting a request
   useEffect(() => {
@@ -101,19 +102,20 @@ const MentorshipRequestPage = () => {
       try {
         const msgs = await getRequestMessages(activeRequestId);
         const normalized = Array.isArray(msgs)
-          ? msgs.map((m: any) => ({
-              from: m.sender && (m.sender.id || m.sender.email) ? "pro" : "pro", // fallback
-              text: m.text,
-            }))
+          ? msgs.map((m: any) => {
+              const senderRaw = typeof m.sender === "object" ? (m.sender.id || m.sender.email) : m.sender;
+              const senderIdStr = senderRaw !== undefined && senderRaw !== null ? String(senderRaw) : "";
+              const from: "you" | "pro" = senderIdStr && senderIdStr === currentUserIdStr ? "you" : "pro";
+              return { from, text: m.text };
+            })
           : [];
-        // If backend returns sender as id, map current user to "you"
         setChat(normalized);
       } catch (e) {
         console.error("Failed to load messages", e);
       }
     };
     loadMessages();
-  }, [activeRequestId]);
+  }, [activeRequestId, currentUserIdStr]);
 
   // Auto-refresh requests so mentee sees status changes and new messages
   useEffect(() => {
@@ -148,10 +150,25 @@ const MentorshipRequestPage = () => {
     setFiles([]);
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!message.trim()) return;
     setChat((prev) => [...prev, { from: "you", text: message }]);
-    if (activeRequestId) appendMessage(activeRequestId, { from: "mentee", text: message });
+    if (activeRequestId) {
+      await appendMessage(activeRequestId, { from: "mentee", text: message });
+      // reload messages to reflect server state ordering
+      try {
+        const msgs = await getRequestMessages(activeRequestId);
+        const normalized = Array.isArray(msgs)
+          ? msgs.map((m: any) => {
+              const senderRaw = typeof m.sender === "object" ? (m.sender.id || m.sender.email) : m.sender;
+              const senderIdStr = senderRaw !== undefined && senderRaw !== null ? String(senderRaw) : "";
+              const from: "you" | "pro" = senderIdStr && senderIdStr === currentUserIdStr ? "you" : "pro";
+              return { from, text: m.text };
+            })
+          : [];
+        setChat(normalized);
+      } catch {}
+    }
     setMessage("");
   };
 
