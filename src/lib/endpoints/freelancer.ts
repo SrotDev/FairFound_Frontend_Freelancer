@@ -8,3 +8,9 @@ export const updateProfile = (data: any) =>
     method: "PATCH",
     body: JSON.stringify(data),
   });
+
+export const getCompetitors = (role: string, tier: "Top" | "Mid" | "Low") =>
+  apiFetch(`/api/freelancers/competitors/?role=${encodeURIComponent(role)}&tier=${encodeURIComponent(tier)}`);
+
+export const getInsights = () =>
+  apiFetch("/api/freelancers/me/insights/");

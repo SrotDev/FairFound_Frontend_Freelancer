@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getProfile as getFreelancerProfile } from "@/lib/endpoints/freelancer";
+import { getProfile as getFreelancerProfile, getCompetitors } from "@/lib/endpoints/freelancer";
 
 import type { FreelancerMetrics } from "@/types/domain";
 import {
@@ -77,6 +77,7 @@ const ProfileComparisonPage = () => {
  
   const [competitorUrl, setCompetitorUrl] = useState("");
   const [selectedRole, setSelectedRole] = useState("web-developer");
+  const [selectedTier, setSelectedTier] = useState<"Top" | "Mid" | "Low">("Top");
   const [selectedCompetitor, setSelectedCompetitor] = useState<string | null>(
     null
   );
@@ -106,28 +107,53 @@ const ProfileComparisonPage = () => {
   }, []);
 
   // ----------------------------
-  // Suggested competitors
+  // Backend competitors by role+tier
   // ----------------------------
-  const suggestedCompetitors = (
-    role: string
-  ): { tier: "Top" | "Mid" | "Low"; name: string; url: string }[] => {
-    const base = role.replace(/-/g, " ");
-    const make = (tier: "Top" | "Mid" | "Low", i: number) => ({
-      tier,
-      name: `${base} Freelancer ${i + 1}`,
-      url: `https://marketplace.example/${role}/${tier.toLowerCase()}-${i + 1}`,
-    });
-    return [
-      ...Array.from({ length: 2 }, (_, i) => make("Top", i)),
-      ...Array.from({ length: 2 }, (_, i) => make("Mid", i)),
-      ...Array.from({ length: 2 }, (_, i) => make("Low", i)),
-    ];
-  };
+  const [backendAvg, setBackendAvg] = useState<{
+    profileCompleteness: number;
+    proposalSuccessRate: number;
+    portfolioItems: number;
+    hourlyRate: number;
+    repeatClientsRate: number;
+  } | null>(null);
+  const [backendCompetitors, setBackendCompetitors] = useState<Array<{
+    id: string;
+    name: string;
+    url: string;
+    metrics: {
+      profileCompleteness: number;
+      proposalSuccessRate: number;
+      portfolioItems: number;
+      hourlyRate: number;
+      repeatClientsRate: number;
+    };
+  }>>([]);
+  const [loadingCompetitors, setLoadingCompetitors] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      setLoadingCompetitors(true);
+      try {
+        const data = await getCompetitors(selectedRole, selectedTier);
+        // Normalize keys from backend average
+        if (data && typeof data === 'object') {
+          const avg = data.average || null;
+          if (avg) setBackendAvg(avg);
+          setBackendCompetitors(Array.isArray(data.competitors) ? data.competitors : []);
+        }
+      } catch (e) {
+        setBackendAvg(null);
+        setBackendCompetitors([]);
+      } finally {
+        setLoadingCompetitors(false);
+      }
+    })();
+  }, [selectedRole, selectedTier]);
 
   // ----------------------------
   // Default benchmark
   // ----------------------------
-  const topFreelancersAverage = {
+  const topFreelancersAverage = backendAvg ?? {
     profileCompleteness: 92,
     proposalSuccessRate: 35,
     portfolioItems: 15,
@@ -162,14 +188,14 @@ const ProfileComparisonPage = () => {
   // ----------------------------
   // Chart + Comparison data
   // ----------------------------
-  const m= apiProfile || freelancerProfile;
+  const m = apiProfile || freelancerProfile;
 
   const comparisonData = [
-    { metric: "Completeness", You: m?.profile_completeness, Top: 92 },
-    { metric: "Proposals", You: m?.proposal_success_rate, Top: 35 },
-    { metric: "Portfolio", You: m?.portfolio_items, Top: 15 },
-    { metric: "Hourly $", You: m?.hourly_rate, Top: 75 },
-    { metric: "Repeat %", You: m?.repeat_clients_rate, Top: 45 },
+    { metric: "Completeness", You: m.profileCompleteness, Top: topFreelancersAverage.profileCompleteness },
+    { metric: "Proposals", You: m.proposalSuccessRate, Top: topFreelancersAverage.proposalSuccessRate },
+    { metric: "Portfolio", You: m.portfolioItems, Top: topFreelancersAverage.portfolioItems },
+    { metric: "Hourly $", You: m.hourlyRate, Top: topFreelancersAverage.hourlyRate },
+    { metric: "Repeat %", You: m.repeatClientsRate, Top: topFreelancersAverage.repeatClientsRate },
   ];
 
   // ----------------------------
@@ -214,39 +240,42 @@ const ProfileComparisonPage = () => {
               </Select>
             </div>
 
-            {/* Suggested competitors */}
-            <div>
-              <h3 className="mb-2 text-lg font-semibold">Suggested Competitors</h3>
-              <div className="space-y-3">
-                {(["Top", "Mid", "Low"] as const).map((tier) => (
-                  <div key={tier}>
-                    <div className="mb-2 text-xs font-medium text-muted-foreground">
-                      {tier} tier
-                    </div>
-                    <div className="grid gap-2">
-                      {suggestedCompetitors(selectedRole)
-                        .filter((c) => c.tier === tier)
-                        .map((c) => (
-                          <button
-                            key={c.url}
-                            className={`w-full rounded-md border px-3 py-2 text-left transition-colors ${
-                              selectedCompetitor === c.url
-                                ? "border-accent bg-accent/10"
-                                : "hover:bg-muted"
-                            }`}
-                            onClick={() => setSelectedCompetitor(c.url)}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm truncate">{c.name}</span>
-                              <span className="text-xs text-muted-foreground">
-                                Select
-                              </span>
-                            </div>
-                          </button>
-                        ))}
-                    </div>
-                  </div>
-                ))}
+            {/* Tier selector + Backend competitors */}
+            <div className="space-y-3">
+              <div>
+                <h3 className="mb-2 text-lg font-semibold">Tier</h3>
+                <Select value={selectedTier} onValueChange={(v) => { setSelectedTier(v as any); setSelectedCompetitor(null); }}>
+                  <SelectTrigger id="tier"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Top">Top</SelectItem>
+                    <SelectItem value="Mid">Mid</SelectItem>
+                    <SelectItem value="Low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-lg font-semibold">Suggested Competitors</h3>
+                <div className="grid gap-2">
+                  {loadingCompetitors && <div className="text-xs text-muted-foreground">Loading...</div>}
+                  {!loadingCompetitors && backendCompetitors.length === 0 && (
+                    <div className="text-xs text-muted-foreground">No competitors available.</div>
+                  )}
+                  {backendCompetitors.map((c) => (
+                    <button
+                      key={c.id}
+                      className={`w-full rounded-md border px-3 py-2 text-left transition-colors ${
+                        selectedCompetitor === c.id ? "border-accent bg-accent/10" : "hover:bg-muted"
+                      }`}
+                      onClick={() => setSelectedCompetitor(c.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm truncate">{c.name}</span>
+                        <span className="text-xs text-muted-foreground">Select</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -277,7 +306,7 @@ const ProfileComparisonPage = () => {
               className="w-full"
               onClick={async () => {
                 const chosenUrl =
-                  selectedCompetitor ?? (competitorUrl || undefined);
+                  (backendCompetitors.find(c => c.id === selectedCompetitor)?.url) ?? (competitorUrl || undefined);
                 setComparisonStarted(true);
                 try {
                   await createComparison({
@@ -290,6 +319,7 @@ const ProfileComparisonPage = () => {
                         ...m,
                         skills: (freelancerProfile as any).skills || [],
                       },
+                      competitorAvg: topFreelancersAverage,
                     },
                   });
 
@@ -337,32 +367,32 @@ const ProfileComparisonPage = () => {
                     <ComparisonRow
                       label="Profile Completeness"
                       userValue={m.profileCompleteness}
-                      topValue={92}
+                      topValue={topFreelancersAverage.profileCompleteness}
                       unit="%"
                     />
                     <ComparisonRow
                       label="Proposal Success Rate"
                       userValue={m.proposalSuccessRate}
-                      topValue={35}
+                      topValue={topFreelancersAverage.proposalSuccessRate}
                       unit="%"
                     />
                     <ComparisonRow
                       label="Portfolio Depth"
                       userValue={m.portfolioItems}
-                      topValue={15}
+                      topValue={topFreelancersAverage.portfolioItems}
                       unit=" projects"
                     />
                     <ComparisonRow
                       label="Hourly Rate"
                       userValue={m.hourlyRate}
-                      topValue={75}
-                      unit="$/hr"
+                      topValue={topFreelancersAverage.hourlyRate}
+                      unit="/hr"
                       prefix="$"
                     />
                     <ComparisonRow
                       label="Repeat Clients"
                       userValue={m.repeatClientsRate}
-                      topValue={45}
+                      topValue={topFreelancersAverage.repeatClientsRate}
                       unit="%"
                     />
                   </div>
