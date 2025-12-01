@@ -104,7 +104,7 @@ const IndustryDashboardPage = () => {
 
               {industry.available ? (
                 <Button
-                  className="w-full hover:bg-cyan-700 group-hover:text-accent-foreground transition-colors"
+                  className="w-full hover:bg-cyan-700 dark:hover:text-white transition-colors"
                   onClick={() => handleIndustrySelect(industry.value)}
                 >
                   Get Started
@@ -124,7 +124,7 @@ const IndustryDashboardPage = () => {
           <p className="text-muted-foreground">
             We're constantly expanding. Join our waitlist to be notified when your industry is added.
           </p>
-          <Button variant="outline" className="mt-4">
+          <Button variant="outline" className="mt-4 bg-cyan-700 text-slate-100 hover:bg-cyan-800 dark:hover:bg-cyan-600">
             Join Waitlist
           </Button>
         </div>

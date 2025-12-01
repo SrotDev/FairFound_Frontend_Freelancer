@@ -14,13 +14,13 @@ import FreelancerDashboardPage from "@/pages/Freelancer/FreelancerDashboardPage"
 import ProfileComparisonPage from "@/pages/Freelancer/ProfileComparisonPage";
 import InsightsPage from "@/pages/Freelancer/InsightsPage";
 import CareerRoadmapPage from "@/pages/Freelancer/CareerRoadmapPage";
-import NotFound from "./pages/NotFound";
-import ComparisonHistoryPage from "@/pages/Freelancer/ComparisonHistoryPage";
-import ComparisonDetailPage from "@/pages/Freelancer/ComparisonDetailPage";
+import ReEvaluationPage from "@/pages/Freelancer/ReEvaluationPage";
+import SentimentInsightsPage from "@/pages/Freelancer/SentimentInsightsPage";
 import ProfilePage from "@/pages/Freelancer/ProfilePage";
 import MentorshipRequestPage from "@/pages/Freelancer/MentorshipRequestPage";
-import MentorshipDashboardPage from "@/pages/Professional/MentorshipDashboardPage";
-import SentimentInsightsPage from "@/pages/Freelancer/SentimentInsightsPage";
+import ComparisonHistoryPage from "@/pages/Freelancer/ComparisonHistoryPage";
+import ComparisonDetailPage from "@/pages/Freelancer/ComparisonDetailPage";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -35,18 +35,20 @@ const App = () => (
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/industry" element={<IndustryDashboardPage />} />
-              <Route path="/freelancer/register" element={<AuthRoute><RegistrationPage /></AuthRoute>} />
-              <Route path="/auth/login" element={<AuthRoute><LoginPage /></AuthRoute>} />
-              <Route path="/freelancer/dashboard" element={<ProtectedRoute><FreelancerDashboardPage /></ProtectedRoute>} />
-              <Route path="/freelancer/compare" element={<ProtectedRoute><ProfileComparisonPage /></ProtectedRoute>} />
-              <Route path="/freelancer/insights" element={<ProtectedRoute><InsightsPage /></ProtectedRoute>} />
-              <Route path="/freelancer/roadmap" element={<ProtectedRoute><CareerRoadmapPage /></ProtectedRoute>} />
-              <Route path="/freelancer/comparison-history" element={<ProtectedRoute><ComparisonHistoryPage /></ProtectedRoute>} />
-              <Route path="/freelancer/comparison-history/:id" element={<ProtectedRoute><ComparisonDetailPage /></ProtectedRoute>} />
-              <Route path="/freelancer/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-              <Route path="/freelancer/mentorship" element={<ProtectedRoute><MentorshipRequestPage /></ProtectedRoute>} />
-              <Route path="/freelancer/sentiment" element={<ProtectedRoute><SentimentInsightsPage /></ProtectedRoute>} />
-              <Route path="/pro/mentorship" element={<ProtectedRoute><MentorshipDashboardPage /></ProtectedRoute>} />
+              <Route path="/freelancer/register" element={<RegistrationPage />} />
+              <Route path="/auth/login" element={<LoginPage />} />
+              <Route path="/dashboard/industry" element={<IndustryDashboardPage />} />
+              <Route path="/freelancer/dashboard" element={<FreelancerDashboardPage />} />
+              <Route path="/freelancer/compare" element={<ProfileComparisonPage />} />
+              <Route path="/freelancer/insights" element={<InsightsPage />} />
+              <Route path="/freelancer/roadmap" element={<CareerRoadmapPage />} />
+              <Route path="/freelancer/re-evaluation" element={<ReEvaluationPage />} />
+              <Route path="/auth/register" element={<RegistrationPage />} />
+              <Route path="/freelancer/sentiment" element={<SentimentInsightsPage />} />
+              <Route path="/freelancer/profile" element={<ProfilePage />} />
+              <Route path="/freelancer/mentorship" element={<MentorshipRequestPage />} />
+              <Route path="/freelancer/comparisonhistory" element={<ComparisonHistoryPage />} />
+              <Route path="/freelancer/comparedetail" element={<ComparisonDetailPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>

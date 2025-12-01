@@ -47,12 +47,12 @@ const LandingPage = () => {
               FairFound helps professionals compare their profiles, get AI-powered insights, and improve across industries. From freelancers to developers, get the data you need to grow.
             </p>
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-              <Link to="/industry">
-                <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold shadow-md">
+              <Link to="/dashboard/industry">
+                <Button size="lg" className="bg-accent hover:bg-cyan-600 dark:bg-cyan-600 dark:hover:bg-cyan-800 text-accent-foreground font-semibold shadow-md">
                   Start your journey
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="border-accent/30 text-foreground dark:text-white bg-accent/5 hover:bg-accent/10 dark:bg-white/5 dark:hover:bg-white/10 backdrop-blur-sm">
+              <Button size="lg" variant="outline" className="border-accent/30 text-foreground hover:text-foreground dark:text-white bg-accent/5 hover:bg-accent/10 dark:bg-white/5 dark:hover:bg-white/10 backdrop-blur-sm">
                 Learn more
               </Button>
             </div>
@@ -194,7 +194,7 @@ const LandingPage = () => {
               Join professionals who are using data to drive their career growth
             </p>
             <Link to="/register">
-              <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground font-semibold shadow-md">
+              <Button size="lg" className="bg-accent hover:bg-cyan-600 dark:bg-slate-200 dark:text-slate-800 dark:hover:bg-slate-600 dark:hover:text-slate-200 text-accent-foreground font-semibold shadow-md">
                 Start for free
               </Button>
             </Link>

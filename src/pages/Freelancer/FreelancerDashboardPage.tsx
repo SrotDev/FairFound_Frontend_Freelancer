@@ -67,9 +67,9 @@ const FreelancerDashboardPage = () => {
         </div>
         <Button
           variant="outline"
-          className="flex items-center gap-2 border-accent/40 text-accent hover:bg-accent/10
+          className="flex items-center gap-2 border-cyan-800 text-cyan-800 hover:text-cyan-800 hover:bg-accent/10
             dark:border-white/20 dark:text-white dark:hover:bg-white/10"
-          onClick={() => navigate("/freelancer/comparison-history")}
+          onClick={() => navigate("/freelancer/comparisonhistory")}
         >
           <ClipboardList className="h-4 w-4" />
           Comparison History
@@ -93,7 +93,7 @@ const FreelancerDashboardPage = () => {
               </div>
               <Button
                 size="lg"
-                className="bg-accent hover:bg-accent/90 text-accent-foreground shrink-0 shadow-md"
+                className="bg-cyan-500 hover:bg-cyan-600 text-accent-foreground shrink-0 shadow-md"
                 onClick={() => navigate("/freelancer/compare")}
               >
                 Compare your profile
@@ -179,7 +179,7 @@ const FreelancerDashboardPage = () => {
               <div className="flex justify-end">
                 <Button
                   size="lg"
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white shadow-md"
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white shadow-md"
                   onClick={() => navigate("/freelancer/mentorship")}
                 >
                   Request Mentorship
