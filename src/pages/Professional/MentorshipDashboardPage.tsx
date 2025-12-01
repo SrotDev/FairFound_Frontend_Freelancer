@@ -3,67 +3,138 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send } from "lucide-react";
+import { useAppContext } from "@/context/AppContext";
+import {
+  getMentorRequests,
+  acceptMentorshipRequest,
+  rejectMentorshipRequest,
+  getRequestMessages,
+  sendMessage as sendMessageApi,
+} from "@/lib/endpoints/mentorship";
 
-type RequestStatus = "pending" | "accepted" | "declined";
-type MentorshipRequest = {
+type BackendStatus = "pending" | "in_progress" | "completed" | "rejected";
+interface MentorshipRequest {
   id: string;
-  name: string;
   topic: string;
   details: string;
-  files: string[];
-  status: RequestStatus;
-  messages: Array<{ from: "mentee" | "pro"; text: string; ts: number }>;
-};
-
-// Read mentorship requests from localStorage (demo only)
-function readRequests(): MentorshipRequest[] {
-  try {
-    const raw = localStorage.getItem("ff_mentorship_requests");
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  status: BackendStatus;
+  requester: string; // raw requester identifier
+  requesterIdStr: string; // normalized string form for equality checks
+  mentor?: string | null;
 }
+interface MessageEntry { id: string; text: string; sender: string; created_at: string }
 
 const MentorshipDashboardPage = () => {
-  const [requests, setRequests] = useState<MentorshipRequest[]>(readRequests());
-  const [acceptedId, setAcceptedId] = useState<string | null>(null);
+  const { user } = useAppContext();
+  // Only use fields actually defined on `User` interface (id, email)
+  const currentUserIdStr = user?.id ? String(user.id) : (user?.email ? String(user.email) : "");
+  const [requests, setRequests] = useState<MentorshipRequest[]>([]);
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<MessageEntry[]>([]);
   const [chatInput, setChatInput] = useState("");
-  const [filter, setFilter] = useState<RequestStatus | "all">("all");
+  const [filter, setFilter] = useState<BackendStatus | "all">("all");
+  const [loading, setLoading] = useState(false);
+  const [msgLoading, setMsgLoading] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      // For 'pending' we want broader set, otherwise just mentor-assigned set
+      if (filter === "pending") {
+        const pending = await getMentorRequests("pending");
+        setRequests(Array.isArray(pending) ? normalize(pending) : []);
+      } else if (filter === "all") {
+        const base = await getMentorRequests();
+        const pending = await getMentorRequests("pending");
+        const mergedMap: Record<string, MentorshipRequest> = {};
+        normalize(base).concat(normalize(pending)).forEach((r) => (mergedMap[r.id] = r));
+        setRequests(Object.values(mergedMap));
+      } else {
+        const data = await getMentorRequests(filter);
+        setRequests(Array.isArray(data) ? normalize(data) : []);
+      }
+    } catch (e) {
+      console.error("Failed to load mentorship requests", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const normalize = (items: any[]): MentorshipRequest[] =>
+    items.map((r) => {
+      const requesterValRaw = typeof r.requester === "object" ? (r.requester.id || r.requester.email) : r.requester;
+      const mentorValRaw = typeof r.mentor === "object" ? (r.mentor?.id || r.mentor?.email) : r.mentor;
+      const requesterIdStr = requesterValRaw !== undefined && requesterValRaw !== null ? String(requesterValRaw) : "";
+      return {
+        id: r.id,
+        topic: r.topic,
+        details: r.details || r.context || "",
+        status: r.status as BackendStatus,
+        requester: requesterValRaw,
+        requesterIdStr,
+        mentor: mentorValRaw,
+      };
+    });
 
   useEffect(() => {
-    const interval = setInterval(() => setRequests(readRequests()), 1500);
+    load();
+  }, [filter]);
+
+  const accept = async (id: string) => {
+    try {
+      await acceptMentorshipRequest(id);
+      await load();
+    } catch (e) {
+      console.error("Accept failed", e);
+    }
+  };
+
+  const decline = async (id: string) => {
+    try {
+      await rejectMentorshipRequest(id);
+      // If active request rejected, clear chat
+      if (activeRequestId === id) {
+        setActiveRequestId(null);
+        setMessages([]);
+      }
+      await load();
+    } catch (e) {
+      console.error("Reject failed", e);
+    }
+  };
+
+  const loadMessages = async (id: string) => {
+    setMsgLoading(true);
+    try {
+      const data = await getRequestMessages(id);
+      setMessages(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error("Load messages failed", e);
+    } finally {
+      setMsgLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!activeRequestId) return;
+    loadMessages(activeRequestId);
+    const interval = setInterval(() => loadMessages(activeRequestId), 4000); // poll
     return () => clearInterval(interval);
-  }, []);
+  }, [activeRequestId]);
 
-  const accept = (id: string) => {
-    setAcceptedId(id);
-    const next = requests.map((r) => (r.id === id ? { ...r, status: "accepted" as RequestStatus } : r));
-    localStorage.setItem("ff_mentorship_requests", JSON.stringify(next));
-    setRequests(next);
+  const send = async () => {
+    if (!activeRequestId || !chatInput.trim()) return;
+    try {
+      await sendMessageApi(activeRequestId, chatInput.trim());
+      setChatInput("");
+      await loadMessages(activeRequestId);
+    } catch (e) {
+      console.error("Send message failed", e);
+    }
   };
 
-  const decline = (id: string) => {
-    const next = requests.map((r) => (r.id === id ? { ...r, status: "declined" as RequestStatus } : r));
-    localStorage.setItem("ff_mentorship_requests", JSON.stringify(next));
-    setRequests(next);
-    if (acceptedId === id) setAcceptedId(null);
-  };
-
-  const send = () => {
-    if (!acceptedId || !chatInput.trim()) return;
-    const next = requests.map((r) =>
-      r.id === acceptedId
-        ? { ...r, messages: [...r.messages, { from: "pro" as const, text: chatInput, ts: Date.now() }] }
-        : r
-    );
-    localStorage.setItem("ff_mentorship_requests", JSON.stringify(next));
-    setRequests(next);
-    setChatInput("");
-  };
-
-  const currentThread = acceptedId ? (requests.find((r) => r.id === acceptedId)?.messages || []) : [];
-  const filtered = filter === "all" ? requests : requests.filter((r) => r.status === filter);
+  const filtered = requests; // Already filtered by load logic
+  const currentThread = messages;
 
   return (
     <div className="container py-12">
@@ -75,45 +146,56 @@ const MentorshipDashboardPage = () => {
 
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="p-6 lg:col-span-1">
-            <h3 className="mb-4 text-lg font-semibold">Incoming Requests</h3>
-            <div className="mb-3 flex items-center gap-2">
+            <h3 className="mb-4 text-lg font-semibold">Mentorship Requests</h3>
+            <div className="mb-3 flex items-center gap-2 flex-wrap">
               <Button variant={filter === "all" ? "default" : "outline"} size="sm" onClick={() => setFilter("all")}>All</Button>
               <Button variant={filter === "pending" ? "default" : "outline"} size="sm" onClick={() => setFilter("pending")}>Pending</Button>
-              <Button variant={filter === "accepted" ? "default" : "outline"} size="sm" onClick={() => setFilter("accepted")}>Accepted</Button>
-              <Button variant={filter === "declined" ? "default" : "outline"} size="sm" onClick={() => setFilter("declined")}>Declined</Button>
+              <Button variant={filter === "in_progress" ? "default" : "outline"} size="sm" onClick={() => setFilter("in_progress")}>In Progress</Button>
+              <Button variant={filter === "rejected" ? "default" : "outline"} size="sm" onClick={() => setFilter("rejected")}>Rejected</Button>
+              <Button variant={filter === "completed" ? "default" : "outline"} size="sm" onClick={() => setFilter("completed")}>Completed</Button>
             </div>
-            <div className="space-y-3">
-              {filtered.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No requests yet. This list updates automatically.</p>
-              ) : (
-                filtered.map((r) => (
-                  <div key={r.id} className="rounded-md border p-3">
-                    <div className="mb-1 text-sm font-medium">{r.name}</div>
-                    <div className="text-xs text-muted-foreground">{r.topic}</div>
-                    <div className="text-xs mt-1">Status: {r.status}</div>
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            ) : filtered.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No requests found.</p>
+            ) : (
+              <div className="space-y-3">
+                {filtered.map((r) => (
+                  <div key={r.id} className={`rounded-md border p-3 cursor-pointer ${activeRequestId === r.id ? "border-accent" : ""}`} onClick={() => setActiveRequestId(r.id)}>
+                    <div className="mb-1 text-sm font-medium">{r.topic}</div>
+                    <div className="text-xs text-muted-foreground">Status: {r.status}</div>
                     <div className="mt-2 text-xs line-clamp-3">{r.details}</div>
-                    <div className="mt-3 flex justify-end">
-                      <Button size="sm" variant="outline" onClick={() => decline(r.id)}>Decline</Button>
-                      <Button size="sm" onClick={() => accept(r.id)}>Accept</Button>
+                    <div className="mt-3 flex gap-2 justify-end">
+                      {r.status === "pending" && !r.mentor && r.requesterIdStr !== currentUserIdStr && (
+                        <>
+                          <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); decline(r.id); }}>Reject</Button>
+                          <Button size="sm" onClick={(e) => { e.stopPropagation(); accept(r.id); }}>Accept</Button>
+                        </>
+                      )}
+                      {r.status === "pending" && r.requesterIdStr === currentUserIdStr && (
+                        <span className="text-xs text-muted-foreground">(Your request)</span>
+                      )}
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </Card>
 
           <Card className="p-6 lg:col-span-2">
             <h3 className="mb-4 text-lg font-semibold">Chat Panel</h3>
-            {!acceptedId ? (
-              <p className="text-sm text-muted-foreground">Select a request and click Accept to start chatting.</p>
+            {!activeRequestId ? (
+              <p className="text-sm text-muted-foreground">Select a request to view or send messages.</p>
             ) : (
               <>
                 <div className="h-72 overflow-y-auto rounded-md border p-3 space-y-2 bg-muted/40">
-                  {currentThread.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No messages yet. Start the conversation.</p>
+                  {msgLoading ? (
+                    <p className="text-sm text-muted-foreground">Loading messages…</p>
+                  ) : messages.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No messages yet.</p>
                   ) : (
-                    currentThread.map((m, idx) => (
-                      <div key={idx} className={`max-w-[70%] rounded-md px-3 py-2 text-sm ${m.from === "pro" ? "bg-accent/20 ml-auto" : "bg-background border"}`}>{m.text}</div>
+                    messages.map((m) => (
+                      <div key={m.id} className={`max-w-[70%] rounded-md px-3 py-2 text-sm ${m.sender === "you" ? "bg-accent/20 ml-auto" : "bg-background border"}`}>{m.text}</div>
                     ))
                   )}
                 </div>

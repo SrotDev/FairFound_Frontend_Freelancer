@@ -8,6 +8,7 @@ import { useAppContext } from "@/context/AppContext";
 import { Edit, Mail, UserRound, Briefcase, Globe, LogOut, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { getProfile, updateProfile } from "@/lib/endpoints/freelancer";
 
 const ProfilePage = () => {
   const { user, setUser, freelancerProfile, updateFreelancerProfile, calculatePseudoRanking } = useAppContext();
@@ -17,7 +18,7 @@ const ProfilePage = () => {
   const [portfolioItems, setPortfolioItems] = React.useState<number>(freelancerProfile.portfolioItems);
   const [proposalSuccessRate, setProposalSuccessRate] = React.useState<number>(freelancerProfile.proposalSuccessRate);
   const [repeatClientsRate, setRepeatClientsRate] = React.useState<number>(freelancerProfile.repeatClientsRate);
-
+  const { logout } = useAppContext();
   const navigate = useNavigate();
   const pseudoRanking = calculatePseudoRanking();
 
@@ -40,9 +41,49 @@ const ProfilePage = () => {
     setHourlyRate(pricing.raw);
   };
 
-  const saveProfile = () => {
-    if (user) setUser({ ...user, name, email });
-    updateFreelancerProfile({ hourlyRate, portfolioItems, proposalSuccessRate, repeatClientsRate });
+  // Load backend profile on mount
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const data = await getProfile();
+        // Expect shape from backend; map safely
+        if (data) {
+          setName(data.name || user?.name || "");
+          setEmail(data.email || user?.email || "");
+          setHourlyRate(Number(data.hourly_rate ?? hourlyRate));
+          setPortfolioItems(Number(data.portfolio_items ?? portfolioItems));
+          setProposalSuccessRate(Number(data.proposal_success_rate ?? proposalSuccessRate));
+          setRepeatClientsRate(Number(data.repeat_clients_rate ?? repeatClientsRate));
+          if (Array.isArray(data.skills)) {
+            updateFreelancerProfile({ skills: data.skills });
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to fetch profile from backend", e);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const saveProfile = async () => {
+    try {
+      // Update local UI state
+      if (user) setUser({ ...user, name, email });
+      updateFreelancerProfile({ hourlyRate, portfolioItems, proposalSuccessRate, repeatClientsRate });
+      // Persist to backend
+      await updateProfile({
+        name,
+        email,
+        hourly_rate: hourlyRate,
+        portfolio_items: portfolioItems,
+        proposal_success_rate: proposalSuccessRate,
+        repeat_clients_rate: repeatClientsRate,
+      });
+      toast({ title: "Profile saved", description: "Your profile was updated." });
+    } catch (e) {
+      console.error("Profile save failed", e);
+      toast({ title: "Save failed", description: "Could not update your profile.", variant: "destructive" });
+    }
   };
 
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -69,7 +110,7 @@ const ProfilePage = () => {
           </Button>
           <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
             <Button variant="destructive" onClick={() => setConfirmOpen(true)} className="gap-2">
-              <LogOut className="h-4 w-4" /> Logout
+              <LogOut onClick={logout} className="h-4 w-4" /> Logout
             </Button>
             <DialogContent>
               <DialogHeader>

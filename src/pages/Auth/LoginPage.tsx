@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,18 +27,38 @@ const LoginPage = () => {
     navigate("/freelancer/dashboard");
   };
 
-  const handleEmailLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Mock email login
-    const mockUser = {
-      id: `user_${Date.now()}`,
+  const handleEmailLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    const data = await apiFetch("/api/auth/login/", {
+      method: "POST",
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    });
+
+    // data = { access, refresh }
+    localStorage.setItem("accessToken", data.access);
+    localStorage.setItem("refreshToken", data.refresh);
+
+    // Minimal user object for the UI
+    const user = {
+      id: email, // since backend didn't send id
       name: email.split("@")[0],
-      email: email,
+      email,
       createdAt: new Date(),
     };
-    setUser(mockUser);
+
+    setUser(user);
+    // Persist user for refresh durability
+    try { localStorage.setItem("user", JSON.stringify(user)); } catch {}
     navigate("/freelancer/dashboard");
-  };
+  } catch (err) {
+    console.error("Login error", err);
+    // TODO: show error message to user
+  }
+};
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-12 px-4">

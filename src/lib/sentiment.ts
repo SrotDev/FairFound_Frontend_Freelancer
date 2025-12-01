@@ -33,7 +33,7 @@ const categoryMap: Record<string,string> = {
 
 const suggestionLibrary: Record<string,string[]> = {
   communication: [
-    "Set clearer expectations at project start",
+    "Set clearer edsadssaxpectations at project start",
     "Provide structured progress updates (daily or milestone-based)",
     "Confirm understanding by summarizing client requests"
   ],

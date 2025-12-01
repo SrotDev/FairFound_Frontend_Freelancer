@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, TrendingUp, AlertCircle, Target, ShieldAlert } from "lucide-react";
 import { useAppContext } from "@/context/AppContext";
+import { useEffect, useState } from "react";
+import { getInsights } from "@/lib/endpoints/freelancer";
 import {
   AreaChart,
   Area,
@@ -26,6 +28,27 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 const InsightsPage = () => {
   const navigate = useNavigate();
   const { freelancerProfile } = useAppContext();
+  const [loading, setLoading] = useState(false);
+  const [swot, setSwot] = useState<{ strengths: string[]; weaknesses: string[]; opportunities: string[]; threats: string[] } | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<Array<{ title: string; impact: string; effort: string }>>([]);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await getInsights();
+        if (data && typeof data === 'object') {
+          setSwot(data.swot || null);
+          setAiSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+        }
+      } catch (e) {
+        setSwot(null);
+        setAiSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   // --- Charts data (mocked from current profile metrics) ---
   const weeks = ["W-7", "W-6", "W-5", "W-4", "W-3", "W-2", "W-1", "W0"];
@@ -47,19 +70,14 @@ const InsightsPage = () => {
 
   const repeatRate = freelancerProfile.repeatClientsRate;
 
-  const swotData = [
+  const swotData = swot ? [
     {
       category: "Strengths",
       icon: TrendingUp,
       color: "text-success",
       bgColor: "bg-success/10",
       borderColor: "border-success/20",
-      items: [
-        "Strong React and TypeScript portfolio with modern projects",
-        "Competitive hourly rate for your experience level",
-        "Good profile completeness showing professionalism",
-        "Diverse skill set covering frontend and UI/UX",
-      ],
+      items: swot.strengths || [],
     },
     {
       category: "Weaknesses",
@@ -67,12 +85,7 @@ const InsightsPage = () => {
       color: "text-warning",
       bgColor: "bg-warning/10",
       borderColor: "border-warning/20",
-      items: [
-        "Low proposal success rate (18%) needs improvement",
-        "Portfolio depth below market leaders (8 vs 15 items)",
-        "Limited backend and DevOps skills",
-        "Repeat client rate could be higher (25% vs 45%)",
-      ],
+      items: swot.weaknesses || [],
     },
     {
       category: "Opportunities",
@@ -80,12 +93,7 @@ const InsightsPage = () => {
       color: "text-secondary",
       bgColor: "bg-secondary/10",
       borderColor: "border-secondary/20",
-      items: [
-        "High demand for React developers in current market",
-        "Adding Next.js expertise could increase opportunities",
-        "Potential to build stronger case studies",
-        "Growing need for full-stack capabilities",
-      ],
+      items: swot.opportunities || [],
     },
     {
       category: "Threats",
@@ -93,41 +101,16 @@ const InsightsPage = () => {
       color: "text-destructive",
       bgColor: "bg-destructive/10",
       borderColor: "border-destructive/20",
-      items: [
-        "Increasing competition in frontend development",
-        "Market shifting toward full-stack requirements",
-        "AI tools impacting junior-level opportunities",
-        "Price competition from global freelancers",
-      ],
+      items: swot.threats || [],
     },
-  ];
+  ] : [];
 
-  const suggestions = [
+  const suggestions = aiSuggestions.length ? [
     {
-      category: "Skills to Improve",
-      items: [
-        { title: "Learn Next.js", impact: "High", effort: "Medium" },
-        { title: "Add Node.js/Express backend skills", impact: "High", effort: "High" },
-        { title: "Basic DevOps (Docker, CI/CD)", impact: "Medium", effort: "Medium" },
-      ],
-    },
-    {
-      category: "Portfolio Improvements",
-      items: [
-        { title: "Create 3 detailed case studies", impact: "High", effort: "Medium" },
-        { title: "Add before/after metrics to projects", impact: "Medium", effort: "Low" },
-        { title: "Showcase a full-stack project", impact: "High", effort: "High" },
-      ],
-    },
-    {
-      category: "Proposal Strategy",
-      items: [
-        { title: "Personalize each proposal more", impact: "High", effort: "Low" },
-        { title: "Lead with client benefits, not features", impact: "High", effort: "Low" },
-        { title: "Include relevant portfolio samples", impact: "Medium", effort: "Low" },
-      ],
-    },
-  ];
+      category: "AI Suggestions",
+      items: aiSuggestions,
+    }
+  ] : [];
 
   const trendingSkills = [
     { name: "Next.js", demand: "Very High" },
@@ -256,7 +239,17 @@ const InsightsPage = () => {
         </div>
 
         <div className="mb-8 grid gap-6 md:grid-cols-2">
-          {swotData.map((section) => (
+          {loading && (
+            <Card className="p-6">
+              <div className="animate-pulse space-y-4">
+                <div className="h-4 bg-muted rounded w-1/3" />
+                <div className="h-3 bg-muted rounded w-2/3" />
+                <div className="h-3 bg-muted rounded w-1/2" />
+                <div className="h-3 bg-muted rounded w-3/5" />
+              </div>
+            </Card>
+          )}
+          {!loading && swotData.map((section) => (
             <Card
               key={section.category}
               className={`p-6 ${section.bgColor} border-2 ${section.borderColor}`}
@@ -281,36 +274,47 @@ const InsightsPage = () => {
 
         <Card className="mb-8 p-6">
           <h2 className="mb-6 text-2xl font-bold">AI-Powered Suggestions</h2>
-          <div className="space-y-6">
-            {suggestions.map((group) => (
-              <div key={group.category}>
-                <h3 className="mb-3 text-lg font-semibold">{group.category}</h3>
-                <div className="space-y-3">
-                  {group.items.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
-                    >
-                      <span className="font-medium">{item.title}</span>
-                      <div className="flex gap-2">
-                        <Badge
-                          variant="secondary"
-                          className={
-                            item.impact === "High"
-                              ? "bg-success/20 text-success"
-                              : "bg-muted"
-                          }
-                        >
-                          {item.impact} impact
-                        </Badge>
-                        <Badge variant="outline">{item.effort} effort</Badge>
+          {loading && (
+            <div className="animate-pulse space-y-3">
+              <div className="h-4 bg-muted rounded w-1/4" />
+              <div className="h-3 bg-muted rounded w-2/3" />
+              <div className="h-3 bg-muted rounded w-1/2" />
+            </div>
+          )}
+          {!loading && (
+            <div className="space-y-6">
+              {suggestions.map((group) => (
+                <div key={group.category}>
+                  <h3 className="mb-3 text-lg font-semibold">{group.category}</h3>
+                  <div className="space-y-3">
+                    {group.items.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
+                      >
+                        <span className="font-medium">{item.title}</span>
+                        <div className="flex gap-2">
+                          <Badge
+                            variant="secondary"
+                            className={
+                              item.impact === "High"
+                                ? "bg-success/20 text-success"
+                                : item.impact === "Medium"
+                                ? "bg-secondary/20 text-secondary"
+                                : "bg-muted"
+                            }
+                          >
+                            {item.impact} impact
+                          </Badge>
+                          <Badge variant="outline">{item.effort} effort</Badge>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
 
         <Card className="mb-8 p-6">
